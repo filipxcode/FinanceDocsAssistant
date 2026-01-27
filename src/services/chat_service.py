@@ -8,6 +8,7 @@ from fastapi import HTTPException, status
 from datetime import datetime
 
 async def get_chat(db: AsyncSession, chat_id: UUID) -> ChatSession:
+    """Retrieves a chat session by ID"""
     res = await db.execute(select(ChatSession).where(ChatSession.id == chat_id, ChatSession.is_deleted == False))
     chat = res.scalar_one_or_none()
     if not chat:
@@ -18,6 +19,7 @@ async def get_chat(db: AsyncSession, chat_id: UUID) -> ChatSession:
     return chat
 
 async def create_chat_session(db: AsyncSession, title: str| None) -> tuple[UUID, str]:
+    """Creates a new chat session in the database"""
     if not title:
         title=f"Rozmowa {datetime.utcnow().strftime('%Y-%m-%d %H:%M')}"
     new_chat = ChatSession(title=title)
@@ -28,7 +30,8 @@ async def create_chat_session(db: AsyncSession, title: str| None) -> tuple[UUID,
     
     return new_chat.id, new_chat.title
 
-async def save_message(db: AsyncSession, chat_id: UUID, mess: ChatTemplate) -> Message:
+async  def save_message(db: AsyncSession, chat_id: UUID, mess: ChatTemplate) -> Message:
+    """Saves a message to the chat history"""
     sources_json = [s.model_dump() for s in mess.sources] if mess.sources else None
     await get_chat(db=db, chat_id=chat_id)
     
@@ -45,10 +48,12 @@ async def save_message(db: AsyncSession, chat_id: UUID, mess: ChatTemplate) -> M
     return mess_db
 
 async def list_chats(db: AsyncSession, limit = 10) -> list[ChatSession]:
+    """Lists recent chat sessions"""
     chats = await db.execute(select(ChatSession).where(ChatSession.is_deleted==False).order_by(ChatSession.created_at.desc()).limit(limit))
     return list(chats.scalars().all())
 
 async def get_chat_history(db: AsyncSession, chat_id: UUID, limit: int | None = None) -> list[Message]: 
+    """Retrieves history of messages for a specific chat"""
     query = (
         select(Message)
         .where(Message.chat_id == chat_id)
@@ -73,12 +78,14 @@ async def get_chat_history(db: AsyncSession, chat_id: UUID, limit: int | None = 
     return list(messages)
 
 async def update_chat_title(db: AsyncSession, chat_id: UUID, new_title: str) -> ChatSession:
+    """Updates the title of a chat session"""
     chat = await get_chat(db, chat_id)
     chat.title = new_title
     await db.commit()
     return chat
 
 async def soft_delete_chat(db: AsyncSession, chat_id: UUID) -> bool:
+    """Soft deletes a chat session"""
     chat = await get_chat(db=db, chat_id=chat_id)
     chat.is_deleted = True
     await db.commit()

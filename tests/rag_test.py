@@ -9,26 +9,27 @@ from ragas.metrics import (
     context_precision,
     context_recall,
 )
-from llama_index.embeddings.huggingface import HuggingFaceEmbedding
+from langchain_huggingface import HuggingFaceEmbeddings
 from ragas.run_config import RunConfig
 import time
 
-from langchain_groq import ChatGroq
+from langchain_community.chat_models import ChatOllama
 from src.api.app import app 
 
 load_dotenv()
-judge_llm = ChatGroq(
-    model="llama-3.3-70b-versatile",
-    api_key=os.getenv("GROQ_API_KEY"),
-    temperature=0
+judge_llm = ChatOllama(
+    model="llama3.1",  
+    temperature=0,  
+    base_url="http://localhost:11434",
+    #format="json"
 )
-embed_model = HuggingFaceEmbedding(
+embed_model = HuggingFaceEmbeddings(
         model_name="BAAI/bge-m3"
     )
 
 my_run_config = RunConfig(
     max_workers=1,        # Absolutnie konieczne: jeden po drugim
-    timeout=180,          # Dajemy mu 3 minuty na odpowiedź (duży bufor)
+    timeout=360,          # Dajemy mu 3 minuty na odpowiedź (duży bufor)
     max_retries=10,       # Jak dostanie 429, niech próbuje do skutku
     max_wait=30           # Czekaj do 60s między próbami
 )

@@ -6,17 +6,18 @@ from src.services.RAGSerivce import RAGService
 from src.config.settings import configure_settings
 import shutil
 from uuid import uuid4
-from src.schemas.schemas import InputQuery, ResponseOutputFinal, ChatTemplate, ChatSessionOut, ChatSessionFull, ChatUpdate, ChatCreate
+from src.schemas.schemas import InputQuery, ResponseOutputFinal, ChatTemplate, ChatSessionOut, ChatSessionFull, ChatUpdate, ChatCreate, DocumentOut
 from cachetools import TTLCache
 from enum import Enum
 from contextlib import asynccontextmanager
 import logging
 import nest_asyncio
-from src.database.db import get_session
+from src.database.db import get_session, async_session_maker
 from sqlalchemy.ext.asyncio import AsyncSession
 from uuid import UUID
 from src.database.db import create_db_and_tables
 from src.services.chat_service import save_message, create_chat_session, list_chats, get_chat_history, soft_delete_chat, update_chat_title, get_chat
+from src.services.document_service import register_file, list_doc_filenames, delete_full_doc
 
 nest_asyncio.apply()
 configure_settings()
@@ -29,6 +30,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class JobStatus(str, Enum):
+    """Enum for background tasking handling"""
     PROCESSING = "processing"
     COMPLETED = "completed"
     FAILED = "failed"
@@ -37,6 +39,7 @@ rag_service: RAGService = None
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    """Life span function to initialize app"""
     global rag_service
     logger.info("Uruchamianie aplikacji i ładowanie modeli")
     
@@ -48,17 +51,21 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-async def process_rag_tasks(file_paths: list[str], job_id: str):
+async def process_rag_tasks(file_paths: list[str], original_paths: list[str], file_sizes: list[int], job_id: str):
+    """Function for processing documents which handling the file uploading to rag service layer and file registration to DB."""
     JOB_STATUS[job_id] = JobStatus.PROCESSING
     try:
-        for p in file_paths:
-            rag_service.process_file(p)
+        async with async_session_maker() as session:
+            for p, o, s in zip(file_paths, original_paths, file_sizes):
+                file_obj = await register_file(db=session, original_filename=o, filename=p, size_bytes=s)
+                await rag_service.process_file(file_path=p, file_id=str(file_obj.id), original_path = o)
         JOB_STATUS[job_id] = JobStatus.COMPLETED
     except Exception as e:
         JOB_STATUS[job_id] = JobStatus.FAILED
-        raise SystemError(f"Processing file error, job_id: {job_id}")
+        logger.error(f"Processing file error, job_id: {job_id}, error: {e}")
 
 async def message_history_preprocessor(chat_history: ChatSessionFull) -> list[str]:
+    """Preprocesses chat history into list of strings"""
     messages = []
     for mess in chat_history:
         role_label = mess.role 
@@ -69,30 +76,39 @@ async def message_history_preprocessor(chat_history: ChatSessionFull) -> list[st
 
 @app.get("/status")
 async def check_status():
+    """Checks RAG service loading status"""
     if rag_service is None:
         return {"status": "loading"}
     return {"status": "ok"}
 
 @app.post("/upload")
 async def upload_files(files: list[UploadFile] = File(...), background_tasks: BackgroundTasks = BackgroundTasks()):
+    """Uploads files and starts background processing task"""
     saved_paths = []
+    file_sizes = []
+    original_paths = []
     job_id = str(uuid4())
     for file in files:
-        safe_filename = f'{job_id}_{file.filename}'
-        file_path = UPLOAD_DIR / safe_filename
+        filename = f"{uuid4()}_{file.filename}" 
+        original_filename = file.filename
+        file_size = file.size
+        file_path = UPLOAD_DIR / filename
         try: 
             with open(file_path, "wb") as buffer:
                 shutil.copyfileobj(file.file, buffer)
             saved_paths.append(str(file_path))
+            file_sizes.append(int(file_size))
+            original_paths.append(str(original_filename))
         except Exception as e:
             raise HTTPException(f"Error in saving file {file.filename}")
-    background_tasks.add_task(process_rag_tasks, saved_paths, job_id)
+    background_tasks.add_task(process_rag_tasks, saved_paths, original_paths, file_sizes, job_id)
     JOB_STATUS[job_id] = JobStatus.PROCESSING
     
     return {"message":"Processing", "job_id": job_id}
 
 @app.get("/jobs/{job_id}")
 async def get_job_status(job_id: str):
+    """Returns status of the file processing job"""
     status = JOB_STATUS.get(job_id)
     if not status:
         return {"status": "unknown"}
@@ -100,6 +116,7 @@ async def get_job_status(job_id: str):
 
 @app.post("/query", response_model=ResponseOutputFinal)
 async def query(q: InputQuery, session: AsyncSession = Depends(get_session)):
+    """Main RAG query endpoint"""
     await save_message(db=session, chat_id=q.chat_id, mess=ChatTemplate.from_input(q))
     try:
         chat_history = await get_chat_history(db=session, chat_id=q.chat_id, limit = 20)
@@ -113,6 +130,7 @@ async def query(q: InputQuery, session: AsyncSession = Depends(get_session)):
 
 @app.get("/files/{filename}")
 async def file_context(filename: str):
+    """Serves uploaded PDF files"""
     safe_name = os.path.basename(filename)
     file_path = UPLOAD_DIR / safe_name
     if not os.path.exists(file_path):
@@ -126,16 +144,19 @@ async def file_context(filename: str):
     
 @app.post("/chats")
 async def create_chat(chat_data: ChatCreate, session: AsyncSession = Depends(get_session)):
+    """Creates a new chat session"""
     id, title = await create_chat_session(db=session, title=chat_data.title)
     return {"id": id, "title": title}
 
 @app.get("/chats", response_model=list[ChatSessionOut])
 async def list_chats_sessions(limit: int = Query(ge=1, le=40, default=10), session: AsyncSession = Depends(get_session)):
+    """Lists active chat sessions"""
     response = await list_chats(db=session, limit=limit)
     return response
 
 @app.get("/chats/{chat_id}", response_model=ChatSessionFull)
 async def show_chat(chat_id: UUID, session: AsyncSession = Depends(get_session)):
+    """Returns full chat history"""
     chat_info = await get_chat(db=session, chat_id=chat_id)
     messages = await get_chat_history(db=session, chat_id=chat_id)
     return ChatSessionFull(
@@ -147,10 +168,24 @@ async def show_chat(chat_id: UUID, session: AsyncSession = Depends(get_session))
 
 @app.delete("/chats/{chat_id}")
 async def delete_chat(chat_id: UUID, session: AsyncSession = Depends(get_session)):
+    """Soft deletes a chat session"""
     response = await soft_delete_chat(db=session, chat_id=chat_id)
     return response
 
 @app.patch("/chats/{chat_id}")
 async def update_title(chat_id: UUID, chat_data:ChatUpdate, session: AsyncSession = Depends(get_session)):
+    """Updates chat session title"""
     response = await update_chat_title(db=session, chat_id=chat_id, new_title=chat_data.title)
+    return response
+
+@app.get("/documents", response_model=list[DocumentOut])
+async def list_documents(limit: int = Query(ge=1, default=20), session: AsyncSession = Depends(get_session)):
+    """Lists processed documents"""
+    response = await list_doc_filenames(db=session, limit=limit)
+    return response
+
+@app.delete("/documents/{document_id}")
+async def delete_document(document_id: UUID,session: AsyncSession = Depends(get_session)):
+    """Deletes document and vectors"""
+    response = await delete_full_doc(db=session, id=document_id, upload_dir=UPLOAD_DIR)
     return response

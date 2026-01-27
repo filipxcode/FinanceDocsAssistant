@@ -1,142 +1,68 @@
-from llama_index.core.retrievers import QueryFusionRetriever
-from llama_index.core.postprocessor import SentenceTransformerRerank
-from llama_index.core.query_engine import RetrieverQueryEngine
-from llama_index.core.postprocessor import MetadataReplacementPostProcessor
-from llama_index.core import PromptTemplate
-from llama_index.core import Settings
-from llama_index.core import get_response_synthesizer
-from llama_index.core.postprocessor import SimilarityPostprocessor
+import logging
+import asyncio
+from llama_index.core import Settings, PromptTemplate, get_response_synthesizer
+from llama_index.core.retrievers import QueryFusionRetriever, BaseRetriever
+from llama_index.core.postprocessor import (
+    SentenceTransformerRerank, 
+    MetadataReplacementPostProcessor, 
+    SimilarityPostprocessor
+)
 from llama_index.core.query_engine import CustomQueryEngine
 from llama_index.core.response_synthesizers import BaseSynthesizer
-from llama_index.core.retrievers import BaseRetriever
 from llama_index.core.postprocessor.types import BaseNodePostprocessor
 from llama_index.core.schema import QueryBundle
-import logging
+
 from src.schemas.schemas import ResponseOutput, SourceData, ResponseOutputFinal
-import asyncio
+from src.config.prompts import (
+    QUERY_GEN_PROMPT, 
+    ANSWEAR_GEN_PROMPT, 
+    CONDENSE_QUESTION_PROMPT
+)
 
 logger = logging.getLogger(__name__)
+
+# Configure logging levels
 logging.getLogger("llama_index.core.retrievers").setLevel(logging.DEBUG)
 logging.getLogger("llama_index.core.indices.vector_store").setLevel(logging.DEBUG)
-logging.getLogger("httpx").setLevel(logging.DEBUG)
+logging.getLogger("httpx").setLevel(logging.WARNING) 
 
-QUERY_GEN_PROMPT = (
-    """Jesteś ekspertem ds. wyszukiwania informacji finansowych. 
-    Twoim zadaniem jest przygotowanie listy zapytań do bazy wektorowej na podstawie pytania użytkownika.
-
-    ZASADY ANALIZY:
-    1. DEKOMPOZYCJA: Jeśli pytanie jest złożone (np. "Porównaj X i Y"), rozbij je na osobne zapytania o X i osobne o Y.
-       Przykład: "Porównaj wyniki 2024 i 2025" -> "Wyniki finansowe rok 2024", "Wyniki finansowe rok 2025".
-    2. STRESZCZANIE I SŁOWA KLUCZOWE: Jeśli pytanie jest długie, wyciągnij z niego tylko kluczowe podmioty i wskaźniki (np. "EBITDA", "Marża netto").
-    3. SYNONIMY: Jeśli wskaźnik ma różne nazwy (np. Przychody/Sprzedaż, Zysk/Wynik netto), użyj wariantów w kolejnych zapytaniach.
-    4. PRECYZJA: Używaj pełnych nazw wskaźników finansowych i konkretnych dat/okresów (Q1, H1, FY).
-    5. JĘZYK: Generuj zapytania wyłącznie po polsku.
-
-    FORMATOWANIE:
-    - Wygeneruj dokładnie {num_queries} zapytań.
-    - Każde zapytanie w nowej linii.
-    - Nie dodawaj numeracji, myślników ani cudzysłowów na początku linii.
-    - NIE dodawaj zbędnych wstępów jak "Oto lista zapytań". Rozpocznij od razu od pierwszego zapytania.
-
-    Pytanie użytkownika: {query}
-
-    Lista zapytań do bazy:
-    """
-)
-ANSWEAR_GEN_PROMPT = (
-    """
-    Jesteś ekspertem w analizie finansowej. Twoim celem jest precyzyjna odpowiedź na pytanie oraz ekstrakcja kluczowych danych liczbowych.
-    
-    ### FORMAT DANYCH WEJŚCIOWYCH
-        Otrzymasz fragmenty tekstu. Każdy z nich zawiera metadane (nazwę pliku i numer strony).
-        Przykład fragmentu:
-        "File: raport_2024.pdf, Page: 15 | Zysk netto wyniósł 500 mln zł."
-        
-    ### ZASADY ODPOWIEDZI (Summary):
-    1. Odpowiadaj w formie podsumowania w polu 'summary_text', 
-    2. Stwórz spójne, merytoryczne podsumowanie, skup się na płynności i poprawności danych.
-    ### ZASADY EKSTRAKCJI DANYCH LICZBOWYCH ('key_numbers'):
-    1. Jeśli w tekście znajdziesz dane liczbowe, dodaj je do listy `key_numbers`.
-    2. Pola: 'amount' (sama liczba float), 'unit' (jednostka, %, mld), 'currency' (PLN, EUR), 'date' (rok/okres).
-    3. Jeśli brakuje danych (np. jednostki), zostaw null.
-
-    
-    ### PRZYKŁAD ODPOWIEDZI JSON:
-    {
-        "summary_text": "W 2024 roku przychody spółki osiągnęły poziom 100 mln PLN [1]. Jednocześnie odnotowano spadek zysku netto o 5%.",
-        "key_numbers": [
-            {"label": "Przychody 2024", "amount": 100.0, "unit": "mln", "currency": "PLN", "date": "2024"},
-            {"label": "Spadek zysku netto", "amount": -5.0, "unit": "%", "currency": null, "date": "2024"}
-        ]
-    }
-    
-    Jeśli nie ma dostarczonych informacji, odpowiadaj tylko i wyłącznie "Niestety, nie znalazłem informacji na ten temat".
-    
-    Podsumowanie jest dla analityków finansowych, którzy potrzebują odpowiedzi z dostarczonych danych finansowych.
-    Twój ton ma być jasny i profesjonalny.
-    -------------------
-    PYTANIE:{query_str}
-    -------------------
-    DOSTARCZONE INFORMACJE:{context_str}
-    """
-)
-
-CONDENSE_QUESTION_PROMPT = (
-"""Biorąc pod uwagę poniższą historię rozmowy oraz nowe pytanie, 
-    sformułuj je na nowo tak, aby było samodzielnym pytaniem, idealnym do wyszukania w raporcie finansowym.
-
-    ZASADY TRANSFORMATORA PYTAŃ:
-
-    1. ROZWIĄZYWANIE CZASU (NAJWAŻNIEJSZE!):
-        - Jeśli użytkownik używa pojęć względnych ("rok wcześniej", "poprzedni kwartał", "analogiczny okres"), 
-         MUSISZ znaleźć ostatnią datę w Historii i obliczyć konkretną nową datę.
-        - Przykład: Jeśli w historii jest "Q1 2025", a user pyta "a rok temu?", zamień to na "Q1 2024".
-        - Nigdy nie zostawiaj w pytaniu słów "tamten rok/kwartał".
-
-    2. UTRZYMANIE SEGMENTU/KONTEKSTU:
-        - Jeśli nowe pytanie brzmi jak KONTYNUACJA (np. "a ile zarobili?", "jaki był wynik?"), a historia dotyczy konkretnego segmentu - zachowaj ten segment.
-        - Jeśli użytkownik pyta o ogólny wskaźnik (np. "EBITDA", "Zysk"), NIE zakładaj automatycznie, że chodzi o segment z historii.
-        - Domyślnie pytania o finanse dotyczą CAŁEJ GRUPY, chyba że kontekst wskazuje wyraźnie inaczej.
-
-    3. SŁOWNIK FINANSOWY (MAPPING):
-        - Zamieniaj potoczne słowa na terminologię z raportów giełdowych:
-        - "Ile zarobili" -> "Zysk netto / EBITDA"
-        - "Ile sprzedali" -> "Przychody / GMV"
-        - "Ile wydali" -> "Koszty operacyjne / CAPEX"
-        - Jeśli użytkownik pyta nieprecyzyjnie, użyj fachowej nazwy wskaźnika, o którym była mowa.
-
-    4. FORMATOWANIE I CZYSTOŚĆ:
-        - Usuń z pytania wszelkie zwroty grzecznościowe ("cześć", "proszę"), wstępy ("chciałbym wiedzieć") i dygresje.
-        - Zwróć TYLKO samo sformułowane pytanie. Żadnych wstępów typu "Oto zmodyfikowane pytanie:".
-        - NIE ODPOWIADAJ na pytanie. Twoim zadaniem jest tylko redakcja tekstu.
-        - Jeśli pytanie jest niezrozumiałe, bezsensowne lub za krótkie ZWRÓĆ JE BEZ ZMIAN lub jako pusty string.
-        - Absolutnie NIE PISZ "Nie znalazłem odpowiedzi", bo nie jesteś od odpowiadania.
-    ---------------------
-    Historia rozmowy:
-    {chat_history}
-    
-    Nowe pytanie użytkownika: {question}
-    ---------------------
-    
-    ZMODYFIKOWANE PYTANIE:"""
-)
 
 class FinancialQueryEngine(CustomQueryEngine):
     retriever: BaseRetriever
     response_synthesizer: BaseSynthesizer
     postprocessors: list[BaseNodePostprocessor]
     
+    def custom_query(self, query_str: str):
+        """Dummy implementation of abstract method"""
+        raise NotImplementedError("Use acustom_query for async execution")
+
     async def acustom_query(self, query: str, chat_history: list[str] = None):
+        """Executes the custom query logic"""
         if len(query) < 3:
             return self._empty_response()
+            
+        original_query = query
         chat_history = chat_history or []
-        if len(chat_history) > 0:
-            history_str = "\n".join(chat_history)
+        
+        effective_history = [h for h in chat_history if query.strip() not in h]
+
+        if len(effective_history) > 0:
+            history_str = "\n".join(effective_history)
             prompt = CONDENSE_QUESTION_PROMPT.format(chat_history=history_str, question=query)
-            response = await Settings.llm.acomplete(prompt)
-            logger.info(f"\n\nzmodyfikowane query{response}\n\n")
-            query = response.text.strip()
-        logger.info(f"\n\CZATY {chat_history}\n\n")
+            response = await Settings.query_llm.acomplete(prompt)
+            
+            rewritten_query = response.text.strip()
+            logger.info(f"\n\n[REWRITE] Oryginał: '{query}' || LLM: '{rewritten_query}'\n\n")
+            
+            # Fallback logic
+            if len(rewritten_query) > 3 and "nie znalazłem" not in rewritten_query.lower():
+                query = rewritten_query
+            else:
+                logger.warning(f"[REWRITE] Nieudane przepisanie ('{rewritten_query}'). Wracam do oryginału.")
+                query = original_query
+        
+        logger.info(f"\n[FUSION INPUT] Query: {query}\n")
+        #logger.info(f"\n\CZATY {chat_history}\n\n")
         #logger.info(" [KROK 1] Rozpoczynam Fusion Retriever...")
         nodes = await self.retriever.aretrieve(query)
         #logger.info(f" [KROK 1] Zakończono. Pobranno {len(nodes)} surowych node.")
@@ -166,13 +92,9 @@ class FinancialQueryEngine(CustomQueryEngine):
         #logger.info(f"\n\n2\n{nodes}\n\n")
         return self._create_final_response(response, nodes)
 
-    def custom_query(self, query: str):
-        import asyncio
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        return loop.run_until_complete(self.acustom_query(query))
 
     def _create_final_response(self, response, nodes):
+        """Creates the final response object with source citations"""
         sources_data_list = [] 
         llm_output = response.response
         logger.info(f"[SafeFinEngine] Znaleziono {len(nodes)} pasujących fragmentów po rerankingu.")
@@ -202,57 +124,66 @@ class FinancialQueryEngine(CustomQueryEngine):
         return ResponseOutputFinal(llm_output=llm_output, source_data=sources_data_list)
     
     def _empty_response(self):
+        """Returns a standardized empty response"""
         return ResponseOutputFinal(llm_output=
                     ResponseOutput(summary_text="Niestety nie udało mi się znaleźć szukanych informacji, prosze doprecyzuj pytanie."), 
                     source_data = [])
 
 class FinancialEngineBuilder:
+    """Builder for FinancialQueryEngine with configured components"""
     def __init__(self, index):
         self.index = index
+        self._initialize_pipeline()
+
+    def _initialize_pipeline(self):
+        """Initializes all RAG components once during startup"""
+        logger.info("[FinancialEngineBuilder] Initializing RAG pipeline components...")
         
+        # 1. Postprocessors
         self.replace_postprocessor = MetadataReplacementPostProcessor(target_metadata_key="window")
-        
         self.treshold_postprocessor = SimilarityPostprocessor(similarity_cutoff=0.1)
-        
         self.reranker = SentenceTransformerRerank(
             model="BAAI/bge-reranker-v2-m3", 
             top_n=5
         )
-
-    async def query_async(self, question: str, chat_history: list[str]):
-        from src.schemas.schemas import ResponseOutput
         
-        hybrid_retriver = self.index.as_retriever(
+        # 2. Retrievers
+        self.hybrid_retriever = self.index.as_retriever(
             similarity_top_k=20, 
             vector_store_query_mode="hybrid"
         )
 
-        fusion_retriever = QueryFusionRetriever(
-            [hybrid_retriver],
+        self.fusion_retriever = QueryFusionRetriever(
+            [self.hybrid_retriever],
             similarity_top_k=20,
             num_queries=3,
             query_gen_prompt=QUERY_GEN_PROMPT,
-            llm=Settings.llm, 
+            llm=Settings.query_llm, 
             mode="reciprocal_rerank",
             verbose=True
         )
         
-        response_synthesizer = get_response_synthesizer(
-            llm=Settings.llm,
+        # 3. Synthesizer
+        self.response_synthesizer = get_response_synthesizer(
+            llm=Settings.synthesis_llm,
             text_qa_template=PromptTemplate(ANSWEAR_GEN_PROMPT),
             response_mode="tree_summarize",
             output_cls=ResponseOutput
         )
-        engine = FinancialQueryEngine(
-            retriever=fusion_retriever,
-            response_synthesizer=response_synthesizer,
+
+        # 4. Engine Assembly
+        self.engine = FinancialQueryEngine(
+            retriever=self.fusion_retriever,
+            response_synthesizer=self.response_synthesizer,
             postprocessors=[
                 self.replace_postprocessor,
                 self.reranker,              
                 self.treshold_postprocessor 
             ]
         )
-        
-        logger.info("[FinQueryEngine] Uruchamianie ASYNC aquery...")
-        response = await engine.acustom_query(question, chat_history)
-        return response
+        logger.info("[FinancialEngineBuilder] Engine initialized successfully.")
+
+    async def query_async(self, question: str, chat_history: list[str]):
+        """Executes the complete query pipeline asynchronously using pre-initialized engine"""
+        logger.info("[FinQueryEngine] Processing query with initialized engine...")
+        return await self.engine.acustom_query(question, chat_history)

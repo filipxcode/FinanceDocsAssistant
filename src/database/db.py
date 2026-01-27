@@ -21,9 +21,11 @@ class Base(DeclarativeBase):
     pass
 
 async def get_session() -> AsyncGenerator[AsyncSession, None]:
+    """Dependency for getting async database session"""
     async with async_session_maker() as session:
         yield session
 
 async def create_db_and_tables():
+    """Creates database tables based on SQLAlchemy models"""
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)

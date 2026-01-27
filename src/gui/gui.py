@@ -2,7 +2,7 @@ import streamlit as st
 import requests
 import pandas as pd
 from datetime import datetime
-
+import time
 # --- KONFIGURACJA ---
 API_URL = "http://localhost:8000"  
 st.set_page_config(
@@ -11,6 +11,30 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+def check_api_status():
+    try:
+        res = requests.get(f"{API_URL}/status", timeout=2)
+        if res.status_code == 200:
+            data = res.json()
+            status = data.get("status")
+            
+            if status == "loading":
+                st.warning("⏳ Serwer uruchamia modele AI... Proszę czekać, niektóre funkcje mogą być niedostępne.", icon="🚦")
+                return False 
+            elif status == "ok":
+                return True
+    except requests.exceptions.ConnectionError:
+        st.error("🔴 Brak połączenia z serwerem API. Upewnij się, że backend działa.", icon="🔌")
+        return False
+    except Exception as e:
+        st.error(f"🔴 Błąd API: {e}", icon="⚠️")
+        return False
+    return True
+
+is_online = check_api_status()
+if not is_online:
+    st.sidebar.warning("Tryb Offline")
 
 def api_load_history(chat_id):
     """Pobiera historię wiadomości dla wybranego czatu"""
@@ -47,7 +71,10 @@ if "active_chat_id" not in st.session_state:
     
 if "chat_list" not in st.session_state:
     st.session_state.chat_list = [] 
-    
+
+if "document_list" not in st.session_state:
+    st.session_state.document_list = []
+
 def api_create_chat(title: str | None = None):
     try:
         json_payload = {"title": title if title else None}
@@ -92,6 +119,26 @@ def api_title_update_chat(chat_id, title):
             api_refresh_chat_list()
     except Exception as e:
         st.error(f"Nie udało się zmienić tytułu: {e}")
+
+def api_list_documents(limit: int = 20):
+    try:
+        res = requests.get(f"{API_URL}/documents", params={"limit":limit})
+        if res.status_code == 200:
+            st.session_state.document_list = res.json()
+    except Exception as e:
+        st.error(f"Nie udalo sie pobrac dokumentów: {e}")
+
+def api_delete_document(doc_id):
+    try:
+        res = requests.delete(f"{API_URL}/documents/{doc_id}")
+        if res.status_code == 200:
+            st.toast("✅ Dokument został usunięty")
+            return True
+        else:
+            st.error(f"Błąd usuwania: {res.text}")
+    except Exception as e:
+        st.error(f"Błąd komunikacji: {e}")
+    return False
         
 def update_job_statuses():
     active_jobs_exist = False
@@ -123,6 +170,52 @@ def set_title(chat_id):
         api_title_update_chat(chat_id, title)
         st.rerun()
 
+@st.dialog("📂 Zarządzanie Plikami")
+def show_files():
+    st.write("Przeglądaj i zarządzaj zaindeksowanymi dokumentami.")
+    
+    col_opt1, col_opt2 = st.columns([2, 2])
+    with col_opt1:
+        load_all = st.checkbox("Pokaż wszystkie (bez limitu)")
+    
+    limit = 10000 if load_all else 20
+    
+    if st.button("🔄 Odśwież listę"):
+        api_list_documents(limit)
+        st.rerun()
+
+    # Auto load if empty
+    if not st.session_state.document_list:
+        api_list_documents(limit)
+        
+    docs = st.session_state.document_list
+    
+    if not docs:
+        st.info("Brak dokumentów.")
+        return
+
+    st.markdown(f"Liczba plików: **{len(docs)}**")
+    st.divider()
+
+    # Table header
+    c1, c2, c3 = st.columns([5, 3, 1])
+    c1.markdown("**Plik**")
+    c2.markdown("**Data**")
+    c3.markdown("**Usuń**")
+    
+    for doc in docs:
+        col1, col2, col3 = st.columns([5, 3, 1])
+        with col1:
+            st.write(f"📄 {doc['original_filename']}")
+            st.caption(f"Rozmiar: {doc['size_bytes'] / 1024:.1f} KB")
+        with col2:
+            st.write(doc['created_at'][:10])
+        with col3:
+            if st.button("❌", key=f"del_{doc['id']}"):
+                if api_delete_document(doc['id']):
+                    api_list_documents(limit)
+                    st.rerun()
+        st.divider()
 with st.sidebar:
     st.title("🎛️ Panel Sterowania")
 
@@ -151,6 +244,9 @@ with st.sidebar:
                 except Exception as e:
                     st.error(f"Błąd: {e}")
 
+        st.divider()
+        if st.button("📂 Zarządzaj plikami", use_container_width=True):
+            show_files()
     st.divider()
 
     st.subheader("📋 Status Zadań")
@@ -202,8 +298,8 @@ with st.sidebar:
                 api_load_history(chat["id"])
                 st.rerun()
         with col2:
-             if st.button("✏️", key=f"edit_{chat['id']}", help="Zmień tytuł"):
-                 set_title(chat["id"])
+            if st.button("✏️", key=f"edit_{chat['id']}", help="Zmień tytuł"):
+                set_title(chat["id"])
         with col3:
             if st.button("Usuń", key=f"delete_{chat['id']}"):
                 api_delete_chat(chat["id"])

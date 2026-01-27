@@ -15,7 +15,8 @@ callback_manager = CallbackManager([llama_debug])
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 logging.getLogger("llama_index.core.retrievers").setLevel(logging.DEBUG)
 
-def get_llm():
+def get_query_llm():
+    """Initializes and returns the LLM instance based on provider"""
     provider = os.getenv("LLM_PROVIDER", "ollama").lower()
     
     if provider == "ollama":
@@ -38,13 +39,23 @@ def get_llm():
         )
     else:
         raise ValueError(f"Unknown provider")
+
+def get_synthesis_llm():
+    api_key = os.getenv("GROQ_API_KEY")
+    return Groq(
+            model="llama-3.3-70b-versatile",
+            api_key=api_key,
+            temperature=0.1
+        )
     
 def configure_settings():
+    """Configures global LlamaIndex settings"""
     Settings.embed_model = HuggingFaceEmbedding(
         model_name="BAAI/bge-m3"
     )
     
-    Settings.llm = Ollama(model="llama3.1", request_timeout=360.0, context_window=8192, temperature=0.1, top_p=0.1)
+    Settings.query_llm = get_query_llm()
+    Settings.synthesis_llm = get_synthesis_llm()
     
     Settings.node_parser = SentenceWindowNodeParser.from_defaults(
         window_size=3,
