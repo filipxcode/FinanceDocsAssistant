@@ -5,7 +5,7 @@ from datetime import datetime
 import re
 
 class InputQuery(BaseModel):
-    query: str
+    query: str = Field(min_length=1)
     chat_id: UUID
 
 class FinancialMetric(BaseModel):
@@ -21,7 +21,7 @@ class FinancialMetric(BaseModel):
         if v:
             clean = v.strip().upper()
             if len(clean) > 3:
-                return clean[:3] # Force truncate if LLM hallucinates extra chars
+                return clean[:3] 
             return clean
         return v
 

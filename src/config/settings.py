@@ -1,3 +1,6 @@
+from pydantic import BaseModel, Field
+from functools import lru_cache
+from pathlib import Path
 from llama_index.core import Settings
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from llama_index.llms.ollama import Ollama
@@ -15,9 +18,42 @@ callback_manager = CallbackManager([llama_debug])
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 logging.getLogger("llama_index.core.retrievers").setLevel(logging.DEBUG)
 
-def get_query_llm():
-    """Initializes and returns the LLM instance based on provider"""
-    provider = os.getenv("LLM_PROVIDER", "ollama").lower()
+class AppSettings(BaseModel):
+    # App Config
+    UPLOAD_DIR: Path = Path("files")
+    
+    # LLM Config
+    LLM_PROVIDER: str = Field(default_factory=lambda: os.getenv("LLM_PROVIDER", "ollama").lower())
+    GROQ_API_KEY: str | None = Field(default_factory=lambda: os.getenv("GROQ_API_KEY"))
+    
+    # Database Config
+    POSTGRES_USER: str = Field(default_factory=lambda: os.getenv("POSTGRES_USER", "postgres"))
+    POSTGRES_PASSWORD: str = Field(default_factory=lambda: os.getenv("POSTGRES_PASSWORD", "postgres"))
+    POSTGRES_HOST: str = Field(default_factory=lambda: os.getenv("POSTGRES_HOST", "localhost"))
+    POSTGRES_PORT: str = Field(default_factory=lambda: os.getenv("POSTGRES_PORT", "5432"))
+    POSTGRES_DB: str = Field(default_factory=lambda: os.getenv("POSTGRES_DB", "vector_db"))
+    
+    # Vector Helper
+    VECTOR_TABLE_NAME: str = "raporty_finansowe_hybrid"
+
+    @property
+    def database_url_async(self) -> str:
+        return f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+
+    @property
+    def database_url_sync(self) -> str:
+        return f"postgresql+psycopg2://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+
+    class Config:
+        arbitrary_types_allowed = True
+
+@lru_cache()
+def get_settings() -> AppSettings:
+    return AppSettings()
+
+@lru_cache()
+def get_query_llm(provider: str, api_key: str | None = None):
+    """Initializes and returns the LLM instance based on provider, cached."""
     
     if provider == "ollama":
         return Ollama(
@@ -29,7 +65,6 @@ def get_query_llm():
         )
     
     elif provider == "groq":
-        api_key = os.getenv("GROQ_API_KEY")
         if not api_key:
             raise ValueError("Wybrano providera GROQ, ale brak GROQ_API_KEY")
         return Groq(
@@ -38,10 +73,13 @@ def get_query_llm():
             temperature=0.1
         )
     else:
-        raise ValueError(f"Unknown provider")
+        raise ValueError(f"Unknown provider: {provider}")
 
-def get_synthesis_llm():
-    api_key = os.getenv("GROQ_API_KEY")
+@lru_cache()
+def get_synthesis_llm(api_key: str | None = None):
+    if not api_key:
+        pass
+        
     return Groq(
             model="llama-3.3-70b-versatile",
             api_key=api_key,
@@ -50,15 +88,18 @@ def get_synthesis_llm():
     
 def configure_settings():
     """Configures global LlamaIndex settings"""
+    settings = get_settings()
+    
     Settings.embed_model = HuggingFaceEmbedding(
         model_name="BAAI/bge-m3"
     )
     
-    Settings.query_llm = get_query_llm()
-    Settings.synthesis_llm = get_synthesis_llm()
+    # Pass necessary args to helper functions
+    Settings.query_llm = get_query_llm(settings.LLM_PROVIDER, settings.GROQ_API_KEY)
+    Settings.synthesis_llm = get_synthesis_llm(settings.GROQ_API_KEY)
     
     Settings.node_parser = SentenceWindowNodeParser.from_defaults(
-        window_size=3,
+        window_size=5,
         window_metadata_key="window",
         original_text_metadata_key="original_text",
     )

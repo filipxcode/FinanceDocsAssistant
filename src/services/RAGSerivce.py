@@ -1,8 +1,7 @@
 from llama_index.vector_stores.postgres import PGVectorStore
 from llama_index.core import VectorStoreIndex
 from src.services.parser import parse_document
-import os
-from src.config.settings import configure_settings
+from src.config.settings import get_settings
 from src.services.FinQueryEngine import FinancialEngineBuilder
 from llama_index.core import Settings
 import logging
@@ -21,19 +20,12 @@ class RAGService:
         
     def _initialize_index(self):
         """Initializes PostgreSQL vector store connection"""
-        user = os.getenv("POSTGRES_USER")
-        password = os.getenv("POSTGRES_PASSWORD")
-        host = os.getenv("POSTGRES_HOST")
-        port = os.getenv("POSTGRES_PORT")
-        db_name = os.getenv("POSTGRES_DB")
-
-        connection_string = f"postgresql+psycopg2://{user}:{password}@{host}:{port}/{db_name}"
-        async_connection_string = f"postgresql+asyncpg://{user}:{password}@{host}:{port}/{db_name}"
+        settings = get_settings()
         
         vector_store = PGVectorStore(
-            connection_string=connection_string,
-            async_connection_string=async_connection_string, 
-            table_name="raporty_finansowe_hybrid", 
+            connection_string=settings.database_url_sync,
+            async_connection_string=settings.database_url_async, 
+            table_name=settings.VECTOR_TABLE_NAME, 
             embed_dim=1024,
             hybrid_search=True,
             text_search_config="simple"

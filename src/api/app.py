@@ -3,7 +3,7 @@ from fastapi.responses import FileResponse
 from pathlib import Path
 import os
 from src.services.RAGSerivce import RAGService
-from src.config.settings import configure_settings
+from src.config.settings import configure_settings, get_settings
 import shutil
 from uuid import uuid4
 from src.schemas.schemas import InputQuery, ResponseOutputFinal, ChatTemplate, ChatSessionOut, ChatSessionFull, ChatUpdate, ChatCreate, DocumentOut
@@ -21,9 +21,9 @@ from src.services.document_service import register_file, list_doc_filenames, del
 
 nest_asyncio.apply()
 configure_settings()
+settings = get_settings()
 
-
-UPLOAD_DIR = Path("files")
+UPLOAD_DIR = settings.UPLOAD_DIR
 UPLOAD_DIR.mkdir(exist_ok=True)
 JOB_STATUS = TTLCache(maxsize=1000, ttl=3600)
 logging.basicConfig(level=logging.INFO)
