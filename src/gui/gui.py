@@ -220,7 +220,7 @@ with st.sidebar:
     st.title("🎛️ Panel Sterowania")
 
     with st.expander("📤 Wgraj nowe pliki", expanded=True):
-        uploaded_files = st.file_uploader("Wybierz PDF", type=["pdf"], accept_multiple_files=True)
+        uploaded_files = st.file_uploader("Wybierz PDF", type=["pdf","pptx","txt","docx"], accept_multiple_files=True)
         
         if uploaded_files and st.button("Uruchom przetwarzanie"):
             files_payload = [("files", (f.name, f, "application/pdf")) for f in uploaded_files]
@@ -231,6 +231,7 @@ with st.sidebar:
                     if res.status_code == 200:
                         data = res.json()
                         job_id = data.get("job_id")
+                        errors = data.get("errors", [])
                         
                         timestamp = datetime.now().strftime("%H:%M:%S")
                         st.session_state.job_queue.insert(0, {
@@ -239,8 +240,17 @@ with st.sidebar:
                             "status": "processing",
                             "created_at": timestamp
                         })
-                        st.success("Zadanie dodane do kolejki!")
-                        st.rerun() 
+                        
+                        if errors:
+                            st.error("⚠️ Wykryto problemy z niektórymi plikami:")
+                            for err in errors:
+                                st.warning(err)
+                        else:
+                            st.success("Zadanie dodane do kolejki!")
+                            time.sleep(0.5)
+                            st.rerun() 
+                    else:
+                        st.error(f"Błąd API: {res.status_code} - {res.text}")
                 except Exception as e:
                     st.error(f"Błąd: {e}")
 

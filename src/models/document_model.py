@@ -12,7 +12,7 @@ class Document(Base):
 class UploadedFile(Base):
     __tablename__ = "uploaded_files"
 
-    id = Column(PG_UUID(as_uuid=True), primary_key=True, default=uuid4())
+    id = Column(PG_UUID(as_uuid=True), primary_key=True, default=uuid4)
     filename = Column(String, nullable=False) 
     original_filename = Column(String, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow) 

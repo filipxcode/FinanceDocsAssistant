@@ -1,0 +1,30 @@
+[
+  {
+    "id": 1,
+    "question": "Jaka była całkowita liczba klientów banku na koniec 3. kwartału 2025 roku?",
+    "type": "SINGLE_FILE",
+    "expected_files": ["pko_test.pdf"],
+    "ground_truth_answer": "12 417 tys."
+  },
+  {
+    "id": 2,
+    "question": "Porównaj sumę pasyw z roku 2020 i 2024.",
+    "type": "MULTI_FILE",
+    "expected_files": ["poczta_2020.pdf", "poczta_2024.pdf"],
+    "ground_truth_answer": "W 2020 pasywa wynosiły 4608155, w 2024 4712244."
+  },
+  {
+    "id": 3,
+    "question": "Jaki jest zysk netto za 2023 uwzględniając notę korygującą?",
+    "type": "CONFLICT",
+    "expected_files": ["korekta_2023.txt"],
+    "ground_truth_answer": "Strata -1.5 mln PLN (zysk z raportu rocznego jest nieaktualny)."
+  },
+  {
+    "id": 4,
+    "question": "Kto wygrał wybory w USA w 2024?",
+    "type": "NEGATIVE",
+    "expected_files": [],
+    "ground_truth_answer": "Nie znalazłem takich informacji w dokumentach."
+  }
+]

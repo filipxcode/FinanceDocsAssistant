@@ -24,7 +24,8 @@ class AppSettings(BaseSettings):
     # LLM Config
     LLM_PROVIDER: str = "ollama"
     GROQ_API_KEY: str | None = None
-    
+    LLAMAPARSE_API_KEY: str | None = None
+
     # Database Config
     POSTGRES_USER: str = "postgres"
     POSTGRES_PASSWORD: str = "postgres"
@@ -36,7 +37,7 @@ class AppSettings(BaseSettings):
     VECTOR_TABLE_NAME: str = "raporty_finansowe_hybrid"
 
     #Languages allowed
-    LANGUAGES_ALLOWED: list[str] = ["POLISH", "ENGLISH"]
+    LANGUAGES_ALLOWED: list[str] = ["POLISH"]
 
     model_config = SettingsConfigDict(
         env_file=".env", 
@@ -113,9 +114,7 @@ def configure_settings():
         original_text_metadata_key="original_text",
     )
     Settings.callback_manager = callback_manager
-    Settings.detector = LanguageDetectorBuilder.from_languages(
+    Settings.language_detector = LanguageDetectorBuilder.from_languages(
         Language.POLISH,
         Language.ENGLISH,
-        Language.GERMAN,
-        Language.FRENCH,
-    ).build() # Here should be more languages', I typed the most common
+    ).build() 

@@ -61,7 +61,11 @@ class RAGService:
             node.excluded_llm_metadata_keys = ["original_text"]
             
         logger.info(f"[RAGService] Zapisywanie węzłów do bazy wektorowej...")
-        await asyncio.to_thread(self.index.insert_nodes, nodes)
+        try:
+            await asyncio.to_thread(self.index.insert_nodes, nodes)
+        except Exception as e:
+            logger.error(f"[RAGService] CRITICAL ERROR during insert_nodes: {e}")
+            raise e
         
         logger.info(f"[RAGService] Plik {original_path} przetworzony pomyślnie.")
         return True

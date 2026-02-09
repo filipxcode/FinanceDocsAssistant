@@ -1,0 +1,35 @@
+SPÓŁKA: [Tu Wstaw Nazwę Twojej Firmy]
+TYP DOKUMENTU: NOTA KORYGUJĄCA DO SPRAWOZDANIA FINANSOWEGO ZA ROK 2024
+NUMER REFERENCYJNY: KOR/FIN/2024/12/FINAL
+STOPIEŃ POUFNOŚCI: WYSOKI / WEWNĘTRZNY
+DATA SPORZĄDZENIA: 15 Marca 2025
+
+DO: Rada Nadzorcza, Dział Księgowości, Audytor Zewnętrzny
+OD: Zarząd Spółki
+
+TEMAT: PILNA KOREKTA WYNIKU FINANSOWEGO NETTO ZA ROK OBROTOWY 2024 WYNIKAJĄCA Z BŁĘDU WYCENY ZAPASÓW.
+
+1. PODSTAWA KOREKTY
+W nawiązaniu do opublikowanego wstępnie Sprawozdania Finansowego za rok 2024, Zarząd Spółki niniejszym informuje o konieczności wprowadzenia istotnej korekty w pozycji Rachunku Zysków i Strat. Podczas dodatkowego audytu wewnętrznego przeprowadzonego w dniach 1-10 marca 2025, wykryto znaczącą nieprawidłowość w systemie ERP dotyczącą wyceny zapasów magazynowych (metoda FIFO). Błąd ten skutkował zawyżeniem aktywów obrotowych oraz wyniku finansowego w pierwotnym raporcie rocznym.
+
+2. SKORYGOWANE WYNIKI FINANSOWE (OBOWIĄZUJĄCE)
+W związku z powyższym, wcześniejsze dane wskazujące na zysk netto za 2024 rok są NIEWAŻNE. Poniżej przedstawiamy ostateczne, skorygowane wartości, które należy przyjmować jako wiążące dla roku 2024:
+
+- Przychody ze sprzedaży: Bez zmian (zgodnie z raportem głównym).
+- Koszty operacyjne: Zwiększone o odpis aktualizujący zapasy w kwocie 4 500 000 PLN.
+- Wynik EBITDA (skorygowany): 500 000 PLN.
+- ZYSK/STRATA NETTO (PO KOREKCIE): -1 500 000 PLN (STRATA JEDEN MILION PIĘĆSET TYSIĘCY ZŁOTYCH).
+
+Prosimy o zignorowanie wartości zysku netto podanej w głównym "Rocznym Sprawozdaniu Finansowym 2024", która błędnie wskazywała na wynik dodatni. Prawdziwym wynikiem spółki za ten okres jest STRATA.
+
+3. UZASADNIENIE MERYTORYCZNE I WPŁYW NA PODATEK
+Błąd wynikał z nieprawidłowej parametryzacji modułu magazynowego po migracji systemu IT w Q3 2024. System nie naliczał automatycznie odpisów na towary nierotujące powyżej 360 dni. Zgodnie z MSR 2 (Międzynarodowe Standardy Rachunkowości - Zapasy), wycena musi odzwierciedlać cenę nabycia lub koszt wytworzenia, chyba że wartość netto możliwa do uzyskania jest niższa. W naszej sytuacji rynkowa wartość zapasów spadła drastycznie, czego pierwotny raport nie uwzględnił.
+Korekta ta ma bezpośredni wpływ na podstawę opodatkowania podatkiem CIT. Skorygowana deklaracja CIT-8 za rok 2024 zostanie złożona w trybie natychmiastowym. Spółka nie wykaże dochodu do opodatkowania za rok 2024.
+
+4. DZIAŁANIA NAPRAWCZE I WNIOSKI KOŃCOWE
+Zarząd podjął decyzję o natychmiastowym rozwiązaniu umowy z firmą wdrażającą system IT. Wprowadzono również dodatkową, ręczną procedurę weryfikacji wyceny zapasów na koniec każdego kwartału.
+Niniejsza nota korygująca jest integralną częścią dokumentacji finansowej za rok 2024 i w przypadku rozbieżności z Raportem Rocznym, niniejszy dokument ma priorytet nadrzędny (tzw. "overrule").
+
+Podpisano:
+Prezes Zarządu
+Główny Księgowy

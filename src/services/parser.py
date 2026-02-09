@@ -2,11 +2,14 @@ from llama_cloud_services import LlamaParse
 from llama_index.core.schema import Document
 import os
 import logging
+from src.config.settings import get_settings
+
 logger = logging.getLogger(__name__)
 async def parse_document(filepath: list[str] | str, lang: str = "pl", no_photos: bool = True, target_p: str | None = None, max_p: int | None = None) -> list[Document]:
     """Parses documents using LlamaParse API"""
+    settings = get_settings()
     parser = LlamaParse(
-            api_key=os.getenv("API_KEY"),
+            api_key=settings.LLAMAPARSE_API_KEY,
             language=lang,
             num_workers=4,
             verbose=True,

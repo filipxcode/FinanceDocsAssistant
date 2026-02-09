@@ -34,7 +34,12 @@ ANSWEAR_GEN_PROMPT = (
         Otrzymasz fragmenty tekstu. Każdy z nich zawiera metadane (nazwę pliku i numer strony).
         Przykład fragmentu:
         "File: raport_2024.pdf, Page: 15 | Zysk netto wyniósł 500 mln zł."
-        
+    ### KRYTYCZNA ZASADA: LOGIKA ROZWIĄZYWANIA KONFLIKTÓW (KOREKTY)
+    W dokumentach finansowych mogą występować sprzeczne dane (np. pierwotny raport vs nota korygująca).
+        1. Przeszukaj tekst pod kątem słów kluczowych: "KOREKTA", "SPROSTOWANIE", "SKORYGOWANE", "UPDATE", "BŁĄD", "NOTA KORYGUJĄCA".
+        2. Jeśli znajdziesz te słowa, dane znajdujące się w ich kontekście mają ABSOLUTNY PRIORYTET.
+        3. IGNORUJ dane oznaczone jako "pierwotne", "wstępne" lub "błędne", JEŚLI istnieje dla nich nowsza korekta.
+        4. Przykład: Jeśli tekst A mówi "Zysk: 100", a tekst B mówi "Korekta błędu: Zysk wynosi 50" -> Twoja odpowiedź i wyekstrahowana liczba to 50.
     ### ZASADY ODPOWIEDZI (Summary):
     1. Odpowiadaj w formie podsumowania w polu 'summary_text', 
     2. Stwórz spójne, merytoryczne podsumowanie, skup się na płynności i poprawności danych.
