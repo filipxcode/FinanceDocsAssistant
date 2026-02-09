@@ -72,6 +72,8 @@ ANSWEAR_GEN_PROMPT = (
 CONDENSE_QUESTION_PROMPT = (
  """Jesteś wirtualnym analitykiem finansowym odpowiedzialnym za precyzję zapytań. 
     Twoim zadaniem jest przepisanie pytania użytkownika na w pełni samodzielne, profesjonalne zapytanie do bazy danych.
+    DZISIAJ JEST: {current_date} (Format: RRRR-MM-DD). Wszelkie odwołania do "dzisiaj", "obecnie", "w tym roku" obliczaj względem tej daty.
+
     ZASADY TRANSFORMATORA PYTAŃ:
 
     1. ROZWIĄZYWANIE CZASU (NAJWAŻNIEJSZE!):

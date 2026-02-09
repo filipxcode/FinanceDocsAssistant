@@ -1,4 +1,5 @@
-from pydantic import BaseModel, Field
+from pydantic import Field, field_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from functools import lru_cache
 from pathlib import Path
 from llama_index.core import Settings
@@ -6,35 +7,46 @@ from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from llama_index.llms.ollama import Ollama
 from llama_index.llms.groq import Groq
 from llama_index.core.node_parser import SentenceWindowNodeParser
-from dotenv import load_dotenv
-import os
 import sys
 from llama_index.core.callbacks import CallbackManager, LlamaDebugHandler
 import logging
+from lingua import Language, LanguageDetectorBuilder
 
-load_dotenv()
 llama_debug = LlamaDebugHandler(print_trace_on_end=True)
 callback_manager = CallbackManager([llama_debug])
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 logging.getLogger("llama_index.core.retrievers").setLevel(logging.DEBUG)
 
-class AppSettings(BaseModel):
+class AppSettings(BaseSettings):
     # App Config
     UPLOAD_DIR: Path = Path("files")
     
     # LLM Config
-    LLM_PROVIDER: str = Field(default_factory=lambda: os.getenv("LLM_PROVIDER", "ollama").lower())
-    GROQ_API_KEY: str | None = Field(default_factory=lambda: os.getenv("GROQ_API_KEY"))
+    LLM_PROVIDER: str = "ollama"
+    GROQ_API_KEY: str | None = None
     
     # Database Config
-    POSTGRES_USER: str = Field(default_factory=lambda: os.getenv("POSTGRES_USER", "postgres"))
-    POSTGRES_PASSWORD: str = Field(default_factory=lambda: os.getenv("POSTGRES_PASSWORD", "postgres"))
-    POSTGRES_HOST: str = Field(default_factory=lambda: os.getenv("POSTGRES_HOST", "localhost"))
-    POSTGRES_PORT: str = Field(default_factory=lambda: os.getenv("POSTGRES_PORT", "5432"))
-    POSTGRES_DB: str = Field(default_factory=lambda: os.getenv("POSTGRES_DB", "vector_db"))
+    POSTGRES_USER: str = "postgres"
+    POSTGRES_PASSWORD: str = "postgres"
+    POSTGRES_HOST: str = "localhost"
+    POSTGRES_PORT: str = "5432"
+    POSTGRES_DB: str = "vector_db"
     
     # Vector Helper
     VECTOR_TABLE_NAME: str = "raporty_finansowe_hybrid"
+
+    #Languages allowed
+    LANGUAGES_ALLOWED: list[str] = ["POLISH", "ENGLISH"]
+
+    model_config = SettingsConfigDict(
+        env_file=".env", 
+        extra="ignore" 
+    )
+
+    @field_validator("LLM_PROVIDER")
+    @classmethod
+    def lowercase_provider(cls, v: str) -> str:
+        return v.lower()
 
     @property
     def database_url_async(self) -> str:
@@ -43,9 +55,6 @@ class AppSettings(BaseModel):
     @property
     def database_url_sync(self) -> str:
         return f"postgresql+psycopg2://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
-
-    class Config:
-        arbitrary_types_allowed = True
 
 @lru_cache()
 def get_settings() -> AppSettings:
@@ -66,7 +75,7 @@ def get_query_llm(provider: str, api_key: str | None = None):
     
     elif provider == "groq":
         if not api_key:
-            raise ValueError("Wybrano providera GROQ, ale brak GROQ_API_KEY")
+            raise ValueError("Choosed groq, but no GROQ_API_KEY")
         return Groq(
             model="llama-3.1-8b-instant",
             api_key=api_key,
@@ -104,4 +113,9 @@ def configure_settings():
         original_text_metadata_key="original_text",
     )
     Settings.callback_manager = callback_manager
-    
+    Settings.detector = LanguageDetectorBuilder.from_languages(
+        Language.POLISH,
+        Language.ENGLISH,
+        Language.GERMAN,
+        Language.FRENCH,
+    ).build() # Here should be more languages', I typed the most common

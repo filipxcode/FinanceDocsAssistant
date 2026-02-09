@@ -1,5 +1,6 @@
 import logging
 import asyncio
+from datetime import datetime
 from llama_index.core import Settings, PromptTemplate, get_response_synthesizer
 from llama_index.core.retrievers import QueryFusionRetriever, BaseRetriever
 from llama_index.core.postprocessor import (
@@ -48,7 +49,12 @@ class FinancialQueryEngine(CustomQueryEngine):
 
         if len(effective_history) > 0:
             history_str = "\n".join(effective_history)
-            prompt = CONDENSE_QUESTION_PROMPT.format(chat_history=history_str, question=query)
+            current_date_str = datetime.now().strftime("%Y-%m-%d")
+            prompt = CONDENSE_QUESTION_PROMPT.format(
+                chat_history=history_str, 
+                question=query, 
+                current_date=current_date_str
+            )
             response = await Settings.query_llm.acomplete(prompt)
             
             rewritten_query = response.text.strip()

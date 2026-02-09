@@ -18,6 +18,7 @@ from uuid import UUID
 from src.database.db import create_db_and_tables
 from src.services.chat_service import save_message, create_chat_session, list_chats, get_chat_history, soft_delete_chat, update_chat_title, get_chat
 from src.services.document_service import register_file, list_doc_filenames, delete_full_doc
+from src.services.language_gate import fast_check_llama_native
 
 nest_asyncio.apply()
 configure_settings()
@@ -87,6 +88,7 @@ async def upload_files(files: list[UploadFile] = File(...), background_tasks: Ba
     saved_paths = []
     file_sizes = []
     original_paths = []
+    errors = []
     job_id = str(uuid4())
     for file in files:
         filename = f"{uuid4()}_{file.filename}" 
@@ -96,6 +98,13 @@ async def upload_files(files: list[UploadFile] = File(...), background_tasks: Ba
         try: 
             with open(file_path, "wb") as buffer:
                 shutil.copyfileobj(file.file, buffer)
+            
+            check_result = fast_check_llama_native(str(file_path))
+            if "error" in check_result:
+                os.remove(file_path)
+                errors.append(f"File {original_filename} rejected: {check_result['error']}")
+                continue
+            
             saved_paths.append(str(file_path))
             file_sizes.append(int(file_size))
             original_paths.append(str(original_filename))
@@ -103,8 +112,10 @@ async def upload_files(files: list[UploadFile] = File(...), background_tasks: Ba
             raise HTTPException(f"Error in saving file {file.filename}")
     background_tasks.add_task(process_rag_tasks, saved_paths, original_paths, file_sizes, job_id)
     JOB_STATUS[job_id] = JobStatus.PROCESSING
-    
-    return {"message":"Processing", "job_id": job_id}
+    response = {"message":"Processing", "job_id": job_id}
+    if errors:
+        response["errors"] = errors
+    return response
 
 @app.get("/jobs/{job_id}")
 async def get_job_status(job_id: str):
