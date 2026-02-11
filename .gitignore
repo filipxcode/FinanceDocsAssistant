@@ -6,3 +6,13 @@ venv/
 .vscode/
 files/
 uploads/
+test_data/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+*.log
+
+
+data/
+tests/test/

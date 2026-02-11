@@ -68,17 +68,12 @@ class FinancialQueryEngine(CustomQueryEngine):
                 query = original_query
         
         logger.info(f"\n[FUSION INPUT] Query: {query}\n")
-        #logger.info(f"\n\CZATY {chat_history}\n\n")
-        #logger.info(" [KROK 1] Rozpoczynam Fusion Retriever...")
         nodes = await self.retriever.aretrieve(query)
-        #logger.info(f" [KROK 1] Zakończono. Pobranno {len(nodes)} surowych node.")
         if not nodes:
-            #logger.warning("Pusto. Wracam.")
             return self._empty_response()
         
         query_bundle = QueryBundle(query)
-        #logger.info(f"\n\n1\n {nodes}\n\n")
-        #logger.info(" [KROK 2] Rozpoczynam postprocessing...")
+
         loop = asyncio.get_running_loop()
         
         for p in self.postprocessors:
@@ -88,14 +83,10 @@ class FinancialQueryEngine(CustomQueryEngine):
                 nodes, 
                 query_bundle
             )
-        #logger.info(f"[KROK 2] Zakończono. Zostało {len(nodes)} node'ów.")
         if not nodes:
-            logger.warning("Pusto. Wracam.")
             return self._empty_response()
-        #logger.info("[KROK 3] Rozpoczynam Syntezę (LLM generuje odpowiedź)...")
         response = await self.response_synthesizer.asynthesize(query, nodes=nodes)
-        #logger.info("[KROK 3] LLM odpowiedział!")
-        #logger.info(f"\n\n2\n{nodes}\n\n")
+
         return self._create_final_response(response, nodes)
 
 

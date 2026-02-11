@@ -1,0 +1,21 @@
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/*.pyd
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
+**/.coverage
+**/.DS_Store
+
+.git/
+.vscode/
+venv/
+
+# Local artifacts / big data
+files/
+uploads/
+data/
+
+# Env
+.env

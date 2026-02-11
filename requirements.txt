@@ -1,0 +1,25 @@
+fastapi
+uvicorn[standard]
+streamlit
+requests
+pandas
+sqlalchemy
+asyncpg
+psycopg2-binary
+pydantic
+pydantic-settings
+python-dotenv
+cachetools
+nest-asyncio
+lingua-language-detector
+
+# LlamaIndex + integrations
+llama-index-core
+llama-index-embeddings-huggingface
+llama-index-llms-groq
+llama-index-llms-openai
+llama-index-vector-stores-postgres
+llama-cloud-services
+
+# Optional tracing / evals
+langsmith
