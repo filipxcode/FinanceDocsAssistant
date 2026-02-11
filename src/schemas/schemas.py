@@ -60,6 +60,7 @@ class SourceData(BaseModel):
     fragment_number: int
     page_ref: int
     filename: str
+    real_filename: str | None = None
     node_content: str
     
 class ResponseOutputFinal(BaseModel):

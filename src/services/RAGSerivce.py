@@ -1,3 +1,4 @@
+import os
 from llama_index.vector_stores.postgres import PGVectorStore
 from llama_index.core import VectorStoreIndex
 from src.services.parser import parse_document
@@ -41,12 +42,13 @@ class RAGService:
         for i, doc in enumerate(documents):
             doc.id_ = file_id
             doc.metadata["filename"] = original_path
+            doc.metadata["real_filename"] = os.path.basename(file_path)
             doc.metadata["file_id"] = file_id   
             page_number = i + 1
             doc.metadata["page_label"] = str(page_number)
             if meta_info:
                 doc.metadata.update(meta_info)
-            doc.excluded_embed_metadata_keys = ["page_label", "filename", "file_id"]
+            doc.excluded_embed_metadata_keys = ["page_label", "filename", "real_filename", "file_id"]
         nodes = Settings.node_parser.get_nodes_from_documents(documents)
         logger.info(f"[RAGService] Dokument podzielony na {len(nodes)} fragmentów (chunks).")
         
@@ -54,7 +56,8 @@ class RAGService:
             node.excluded_embed_metadata_keys = [
                 "window",       
                 "original_text", 
-                "filename", 
+                "filename",
+                "real_filename", 
                 "page_label",
                 "file_id"
             ]

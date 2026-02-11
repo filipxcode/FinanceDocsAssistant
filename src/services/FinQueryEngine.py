@@ -100,6 +100,7 @@ class FinancialQueryEngine(CustomQueryEngine):
             score_val = node_with_score.score
             
             file = actual_node.metadata.get('filename', 'N/A')
+            real_file = actual_node.metadata.get('real_filename')
             page = actual_node.metadata.get('page_label', '0')
             text = actual_node.get_content()
             try:
@@ -115,6 +116,7 @@ class FinancialQueryEngine(CustomQueryEngine):
                 fragment_number=int(idx+1),
                 page_ref=page_int,
                 filename=str(file),
+                real_filename=real_file,
                 node_content=text
             )
             sources_data_list.append(source_obj)

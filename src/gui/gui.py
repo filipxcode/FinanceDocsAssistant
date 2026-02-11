@@ -385,7 +385,8 @@ for i, message in enumerate(st.session_state.messages):
             with st.expander("📚 Zobacz Źródła"):
                 for idx, src in enumerate(message["sources"]):
                     unique_key = f"hist_src_{i}_{idx}"
-                    pdf_link = f"{API_URL}/files/{src['filename']}#page={src['page_ref']}"
+                    actual_fname = src.get('real_filename') or src['filename']
+                    pdf_link = f"{API_URL}/files/{actual_fname}#page={src['page_ref']}"
                     st.markdown(f"- [**{src['filename']} - Strona {src['page_ref']}**]({pdf_link})")
                     if st.button("🔍 Tekst", key=unique_key):
                         show_node(src)
@@ -422,7 +423,8 @@ if prompt := st.chat_input("Napisz pytanie... np. Jaki jest prognozowany wzrost 
                         with st.expander("📚 Źródła Dokumentów"):
                             for idx, src in enumerate(source_data):
                                 unique_key = f"new_src_{idx}"
-                                pdf_link = f"{API_URL}/files/{src['filename']}#page={src['page_ref']}"
+                                actual_fname = src.get('real_filename') or src.get('filename')
+                                pdf_link = f"{API_URL}/files/{actual_fname}#page={src['page_ref']}"
                                 st.markdown(f"- [**{src['filename']} - Strona {src['page_ref']}**]({pdf_link})")
                                 if st.button("🔍 Tekst", key=unique_key):
                                     show_node(src)
