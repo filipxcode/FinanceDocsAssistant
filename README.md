@@ -195,41 +195,67 @@ Testy przeprowadziłem używając **LangSmith**. Do oceny wykorzystałem podejś
 | **JSON Accuracy** | Zgodność otrzymanych wyników `FinancialMetrics` względem Ground Truth (mój customowy feature, wymagający poprawek) |
 | **Errors** | Błędy podczas ewaluacji |
 
+### Zakres ewaluacji
+
+Poniższe zdjęcie przedstawia zestaw pytań testowych sformułowanych po polsku. System został przetestowany na **9 scenariuszach** celujących w konkretne tryby awaryjne RAG:
+
+- **Pułapki logiczne i korekty** — priorytetyzacja zaktualizowanych danych nad nieaktualnymi raportami (np. korekta zysku netto)
+- **Rozumowanie matematyczne** — operacje arytmetyczne na pobranych danych (np. różnica zobowiązań)
+- **Logika temporalna** — zapytania z relatywnym odniesieniem czasowym (np. „raport sprzed 2 lat")
+- **Ekstrakcja ze struktur** — wyciąganie precyzyjnych danych z tabel i interpretacja wykresów słupkowych
+- **Guardrails** — poprawna obsługa zapytań spoza zakresu (negative retrieval), zapobieganie halucynacjom
+
+![Zestaw pytań ewaluacyjnych](photos/Zrzut%20ekranu%202026-02-11%20133338.png)
+
 ### Wyniki ewaluacji
 
 Ewaluacje przeprowadziłem dla dwóch modeli: **Llama 3.3 70B** i **GPT o3-mini**. Widać zdecydowaną przewagę o3-mini kosztem droższych tokenów oraz dłuższego opóźnienia (Latency).
-
-
-
-
-
 
 #### GPT o3-mini (OpenAI)
 ![Ewaluacja GPT o3-mini — szczegóły](photos/Zrzut%20ekranu%202026-02-11%20133532.png)
 
 
 #### Llama 3.3 70B (Groq)
-![Ewaluacja Llama 3.3 70B — wyniki](photos/Zrzut%ekranu%2026-02-11%155125.png.png)
+![Ewaluacja Llama 3.3 70B — wyniki](photos/Zrzut%20ekranu%202026-02-11%20155125.png)
 
 ### Tabela porównawcza
 
+| Metryka | Llama 3.3 70B (Groq) | GPT o3-mini (OpenAI) | Δ |
+|---|:---:|:---:|:---:|
+| **Relevance** | 0.86 | **1.00** | +16% |
+| **Correctness** | 0.69 | **0.89** | +29% |
+| **Faithfulness** | 0.57 | **1.00** | +75% |
+| **Latency (avg)** | **12.13s** | 22.07s | +82% |
+| **JSON Accuracy** | 0.61 | 0.60 | −2% |
+| **Errors** | 0 | 0 | — |
 
-| Metryka | Llama 3.3 70B | GPT o3-mini |
-|---|---|---|
-| Relevance | 0.86 | 1.00 |
-| Correctness | 0.69 | 0.89 |
-| Faithfulness | 0.57 | 1.00 |
-| Latency (avg) | 12.13s | 22.07s |
-| JSON Accuracy | 0.61 | 0.6 |
-| Errors | 0 | 0 |
-
-![Porównanie wykres — szczegóły](photos/Zrzut%20ekranu%202026-02-11%20133811.png)
+![Porównanie wykres — szczegóły](photos/Zrzut%20ekranu%202026-02-11%20155939.png)
 
 ### Zużycie tokenów
 
+| Metryka | Llama 3.3 70B (Groq) | GPT o3-mini (OpenAI) |
+|---|:---:|:---:|
+| **Input Tokens** (Prompt + Context) | ~4 100 | ~7 413 |
+| **Output Tokens** (Generation) | ~200 | ~894 |
+| **Latency** (czas odpowiedzi) | 12.13s | 22.07s |
+| **Koszt per request** (est.) | $0.0025 (~0.2 ¢) | $0.0115 (~1.1 ¢) |
+| **Koszt za 1 000 zapytań** | $2.50 | $11.50 |
 
-| Model | Input tokens | Output tokens | Koszt przybliżony |
-|---|---|---|---|
-| Llama 3.3 70B (Groq) | — | — | — |
-| GPT o3-mini (OpenAI) | — | — | — |
+> **Uwaga:** Koszt o3-mini przewyższa Llamę ~4-krotnie, jednak w wartościach bezwzględnych pozostaje niski (~1.1 centa za zapytanie / ~$11.50 za 1 000 zapytań). Biorąc pod uwagę, że przetwarzane są dane finansowe, gdzie dokładność i wiarygodność odpowiedzi mają kluczowe znaczenie, różnica kosztowa jest w pełni akceptowalna.
 
+### Wnioski
+
+Zdecydowanie lepszym wyborem dla `synthesis_llm` w tym projekcie jest **GPT o3-mini**. Pomimo ~4× wyższego kosztu i dłuższego czasu odpowiedzi, model ten zapewnia:
+- **100% Faithfulness** (brak halucynacji) vs 57% u Llamy
+- **100% Relevance** vs 86%
+- Znacząco wyższą **Correctness** (0.89 vs 0.69)
+
+Różnica kosztowa (~$9/1 000 zapytań) jest nieodczuwalna w kontekście analizy dokumentów finansowych, gdzie błędne dane mogą prowadzić do poważnych konsekwencji.
+
+---
+
+## Feature updates
+
+- [ ] Poprawa mechanizmu ekstrakcji metryk finansowych (`JSON Accuracy`)
+- [ ] Dodanie streamingu odpowiedzi (SSE/WebSocket)
+- [ ] Przejście na jeszcze lepszy model (większy koszt, wyższa jakość)
