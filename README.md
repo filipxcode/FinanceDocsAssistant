@@ -184,13 +184,51 @@ PYTHONPATH=. python tests/rag_test/rag_test.py
 
 ## Ewaluacja
 
-Testy przeprowadziłem używając langsmith. Zbadałem wyniki pod następującymi aspektami:
-        Relevance - Czy znaleziono odpowiedni dokument (Ocena retrivera)
-        Corectness - Wiarygodność względem prawdy (Ground Thruth)
-        Faithfulness - Wiarygodność względem otrzymanych informacji ze źródła
-        Latency - Czas generacji
-        Json Accuracy - Zgodność otrzymanych wyników "FinancialMetrics" względem Ground Truth (Mój customowy feature, wymagający poprawek)
-        Errors 
-        
+Testy przeprowadziłem używając **LangSmith**. Do oceny wykorzystałem podejście **LLM-as-a-Judge** z metryką **Relevance Answer** (ocena trafności odpowiedzi, a nie samego kontekstu). Zbadałem wyniki pod następującymi aspektami:
 
-Ewaluacje przeprowadziłem dla dwóch modeli Llama3.1:70b i gpt-o3mini. Widać zdecydowana przewagę o3mini kosztem droższych tokenów oraz dłuższego opóznienia(Latency)
+| Metryka | Opis |
+|---|---|
+| **Relevance** | Czy znaleziono odpowiedni dokument (ocena retrievera) |
+| **Correctness** | Wiarygodność względem prawdy (Ground Truth) |
+| **Faithfulness** | Wiarygodność względem otrzymanych informacji ze źródła |
+| **Latency** | Czas generacji odpowiedzi |
+| **JSON Accuracy** | Zgodność otrzymanych wyników `FinancialMetrics` względem Ground Truth (mój customowy feature, wymagający poprawek) |
+| **Errors** | Błędy podczas ewaluacji |
+
+### Wyniki ewaluacji
+
+Ewaluacje przeprowadziłem dla dwóch modeli: **Llama 3.3 70B** i **GPT o3-mini**. Widać zdecydowaną przewagę o3-mini kosztem droższych tokenów oraz dłuższego opóźnienia (Latency).
+
+#### Llama 3.3 70B (Groq)
+
+![Ewaluacja Llama 3.3 70B — wyniki](photos/Zrzut%20ekranu%202026-02-11%20133519.png)
+
+![Ewaluacja Llama 3.3 70B — szczegóły](photos/Zrzut%20ekranu%202026-02-11%20133532.png)
+
+#### GPT o3-mini (OpenAI)
+
+![Ewaluacja GPT o3-mini — wyniki](photos/Zrzut%20ekranu%202026-02-11%20133556.png)
+
+![Ewaluacja GPT o3-mini — szczegóły](photos/Zrzut%20ekranu%202026-02-11%20133811.png)
+
+### Zużycie tokenów
+
+<!-- TODO: Uzupełnij dane o zużyciu tokenów dla obu modeli -->
+
+| Model | Input tokens | Output tokens | Koszt przybliżony |
+|---|---|---|---|
+| Llama 3.3 70B (Groq) | — | — | — |
+| GPT o3-mini (OpenAI) | — | — | — |
+
+### Tabela porównawcza
+
+<!-- TODO: Uzupełnij tabelę na podstawie wyników z LangSmith -->
+
+| Metryka | Llama 3.3 70B | GPT o3-mini |
+|---|---|---|
+| Relevance | — | — |
+| Correctness | — | — |
+| Faithfulness | — | — |
+| Latency (avg) | — | — |
+| JSON Accuracy | — | — |
+| Errors | — | — |
