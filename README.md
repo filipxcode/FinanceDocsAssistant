@@ -199,15 +199,17 @@ Testy przeprowadziłem używając **LangSmith**. Do oceny wykorzystałem podejś
 
 Ewaluacje przeprowadziłem dla dwóch modeli: **Llama 3.3 70B** i **GPT o3-mini**. Widać zdecydowaną przewagę o3-mini kosztem droższych tokenów oraz dłuższego opóźnienia (Latency).
 
-#### Llama 3.3 70B (Groq)
 
-![Ewaluacja Llama 3.3 70B — wyniki](photos/Zrzut%20ekranu%202026-02-11%20133519.png)
+![Ewaluacja Llama 3.3 70B — wyniki](photos/Zrzut%ekranu%2026-02-11%133338.png)
 
-![Ewaluacja Llama 3.3 70B — szczegóły](photos/Zrzut%20ekranu%202026-02-11%20133532.png)
+
 
 #### GPT o3-mini (OpenAI)
+![Ewaluacja GPT o3-mini — szczegóły](photos/Zrzut%20ekranu%202026-02-11%20133532.png)
 
-![Ewaluacja GPT o3-mini — wyniki](photos/Zrzut%20ekranu%202026-02-11%20133556.png)
+
+#### Llama 3.3 70B (Groq)
+![Ewaluacja Llama 3.3 70B — wyniki](photos/Zrzut%20ekranu%202026-02-11%20133556.png)
 
 ![Ewaluacja GPT o3-mini — szczegóły](photos/Zrzut%20ekranu%202026-02-11%20133811.png)
 
@@ -222,7 +224,6 @@ Ewaluacje przeprowadziłem dla dwóch modeli: **Llama 3.3 70B** i **GPT o3-mini*
 
 ### Tabela porównawcza
 
-<!-- TODO: Uzupełnij tabelę na podstawie wyników z LangSmith -->
 
 | Metryka | Llama 3.3 70B | GPT o3-mini |
 |---|---|---|
