@@ -200,7 +200,7 @@ Testy przeprowadziłem używając **LangSmith**. Do oceny wykorzystałem podejś
 Ewaluacje przeprowadziłem dla dwóch modeli: **Llama 3.3 70B** i **GPT o3-mini**. Widać zdecydowaną przewagę o3-mini kosztem droższych tokenów oraz dłuższego opóźnienia (Latency).
 
 
-![Ewaluacja Llama 3.3 70B — wyniki](photos/Zrzut%ekranu%2026-02-11%133338.png)
+
 
 
 
@@ -209,27 +209,27 @@ Ewaluacje przeprowadziłem dla dwóch modeli: **Llama 3.3 70B** i **GPT o3-mini*
 
 
 #### Llama 3.3 70B (Groq)
-![Ewaluacja Llama 3.3 70B — wyniki](photos/Zrzut%20ekranu%202026-02-11%20133556.png)
-
-![Ewaluacja GPT o3-mini — szczegóły](photos/Zrzut%20ekranu%202026-02-11%20133811.png)
-
-### Zużycie tokenów
-
-<!-- TODO: Uzupełnij dane o zużyciu tokenów dla obu modeli -->
-
-| Model | Input tokens | Output tokens | Koszt przybliżony |
-|---|---|---|---|
-| Llama 3.3 70B (Groq) | — | — | — |
-| GPT o3-mini (OpenAI) | — | — | — |
+![Ewaluacja Llama 3.3 70B — wyniki](photos/Zrzut%ekranu%2026-02-11%155125.png.png)
 
 ### Tabela porównawcza
 
 
 | Metryka | Llama 3.3 70B | GPT o3-mini |
 |---|---|---|
-| Relevance | — | — |
-| Correctness | — | — |
-| Faithfulness | — | — |
-| Latency (avg) | — | — |
-| JSON Accuracy | — | — |
-| Errors | — | — |
+| Relevance | 0.86 | 1.00 |
+| Correctness | 0.69 | 0.89 |
+| Faithfulness | 0.57 | 1.00 |
+| Latency (avg) | 12.13s | 22.07s |
+| JSON Accuracy | 0.61 | 0.6 |
+| Errors | 0 | 0 |
+
+![Porównanie wykres — szczegóły](photos/Zrzut%20ekranu%202026-02-11%20133811.png)
+
+### Zużycie tokenów
+
+
+| Model | Input tokens | Output tokens | Koszt przybliżony |
+|---|---|---|---|
+| Llama 3.3 70B (Groq) | — | — | — |
+| GPT o3-mini (OpenAI) | — | — | — |
+
