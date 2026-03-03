@@ -116,7 +116,10 @@ Uzupełnij klucze API w pliku `.env`:
 GROQ_API_KEY=twoj_klucz
 LLAMAPARSE_API_KEY=twoj_klucz
 OPENAI_API_KEY=twoj_klucz
-LLM_PROVIDER=groq / openai #Dla lepszych wyników wybierz openai
+LLM_PROVIDER_QUERY=groq
+LLM_PROVIDER_SYNTHESIS=openai
+DEMO_PASSWORD=haslo_demo_dla_rekrutera
+MAX_UPLOAD_FILE_SIZE_MB=100
 ```
 
 ### 2. Uruchomienie bazy danych (pgvector)
@@ -154,6 +157,12 @@ UI dostępne pod: `http://localhost:8501`
 ```bash
 docker compose -f src/docker-compose.yml up --build
 ```
+
+Po starcie:
+- API: `http://localhost:8000`
+- GUI: `http://localhost:8501`
+
+Compose uruchamia usługi: `db` + `api` + `gui`.
 
 ## Endpointy API
 

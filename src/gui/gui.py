@@ -3,8 +3,9 @@ import requests
 import pandas as pd
 from datetime import datetime
 import time
+import os
 # --- KONFIGURACJA ---
-API_URL = "http://localhost:8000"  
+API_URL = os.getenv("API_URL", "http://localhost:8000")
 st.set_page_config(
     page_title="FinAI Assistant",
     page_icon="📊",
@@ -12,9 +13,24 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+if "demo_password" not in st.session_state:
+    st.session_state.demo_password = os.getenv("DEMO_PASSWORD", "")
+
+def get_auth_headers():
+    password = st.session_state.get("demo_password", "").strip()
+    if not password:
+        return {}
+    return {"X-Demo-Password": password}
+
+def api_request(method: str, endpoint: str, **kwargs):
+    headers = kwargs.pop("headers", {})
+    merged_headers = {**get_auth_headers(), **headers}
+    timeout = kwargs.pop("timeout", 30)
+    return requests.request(method, f"{API_URL}{endpoint}", headers=merged_headers, timeout=timeout, **kwargs)
+
 def check_api_status():
     try:
-        res = requests.get(f"{API_URL}/status", timeout=2)
+        res = api_request("GET", "/status", timeout=2)
         if res.status_code == 200:
             data = res.json()
             status = data.get("status")
@@ -24,6 +40,9 @@ def check_api_status():
                 return False 
             elif status == "ok":
                 return True
+        elif res.status_code == 401:
+            st.error("🔒 Brak autoryzacji. Ustaw poprawne hasło demo w panelu bocznym.", icon="🔑")
+            return False
     except requests.exceptions.ConnectionError:
         st.error("🔴 Brak połączenia z serwerem API. Upewnij się, że backend działa.", icon="🔌")
         return False
@@ -39,7 +58,7 @@ if not is_online:
 def api_load_history(chat_id):
     """Pobiera historię wiadomości dla wybranego czatu"""
     try:
-        res = requests.get(f"{API_URL}/chats/{chat_id}")
+        res = api_request("GET", f"/chats/{chat_id}")
         if res.status_code == 200:
             data = res.json()
             backend_msgs = data.get("messages", [])
@@ -78,7 +97,7 @@ if "document_list" not in st.session_state:
 def api_create_chat(title: str | None = None):
     try:
         json_payload = {"title": title if title else None}
-        res = requests.post(f"{API_URL}/chats", json=json_payload)
+        res = api_request("POST", "/chats", json=json_payload)
         if res.status_code == 200:
             data = res.json()
             new_id = data["id"]
@@ -95,7 +114,7 @@ def api_create_chat(title: str | None = None):
 def api_refresh_chat_list():
     """Pobiera listę dostępnych czatów"""
     try:
-        res = requests.get(f"{API_URL}/chats")
+        res = api_request("GET", "/chats")
         if res.status_code == 200:
             st.session_state.chat_list = res.json()
     except Exception as e:
@@ -105,7 +124,7 @@ def api_refresh_chat_list():
 
 def api_delete_chat(chat_id):
     try:
-        res = requests.delete(f"{API_URL}/chats/{chat_id}")
+        res = api_request("DELETE", f"/chats/{chat_id}")
         if res.status_code == 200:
             api_refresh_chat_list()
     except Exception as e:
@@ -114,7 +133,7 @@ def api_delete_chat(chat_id):
 
 def api_title_update_chat(chat_id, title):
     try:
-        res = requests.patch(f"{API_URL}/chats/{chat_id}", json={"title":title})
+        res = api_request("PATCH", f"/chats/{chat_id}", json={"title":title})
         if res.status_code == 200:
             api_refresh_chat_list()
     except Exception as e:
@@ -122,7 +141,7 @@ def api_title_update_chat(chat_id, title):
 
 def api_list_documents(limit: int = 20):
     try:
-        res = requests.get(f"{API_URL}/documents", params={"limit":limit})
+        res = api_request("GET", "/documents", params={"limit":limit})
         if res.status_code == 200:
             st.session_state.document_list = res.json()
     except Exception as e:
@@ -130,7 +149,7 @@ def api_list_documents(limit: int = 20):
 
 def api_delete_document(doc_id):
     try:
-        res = requests.delete(f"{API_URL}/documents/{doc_id}")
+        res = api_request("DELETE", f"/documents/{doc_id}")
         if res.status_code == 200:
             st.toast("✅ Dokument został usunięty")
             return True
@@ -147,7 +166,7 @@ def update_job_statuses():
         if job['status'] == "processing":
             active_jobs_exist = True
             try:
-                res = requests.get(f"{API_URL}/jobs/{job['id']}")
+                res = api_request("GET", f"/jobs/{job['id']}")
                 if res.status_code == 200:
                     new_status = res.json().get("status")
                     job['status'] = new_status 
@@ -218,6 +237,16 @@ def show_files():
         st.divider()
 with st.sidebar:
     st.title("🎛️ Panel Sterowania")
+    st.text_input(
+        "🔐 Hasło demo",
+        type="password",
+        key="demo_password",
+        help="Hasło jest wysyłane w nagłówku X-Demo-Password do backendu.",
+    )
+    if st.session_state.demo_password:
+        st.caption("✅ Nagłówek autoryzacji aktywny")
+    else:
+        st.caption("⚠️ Uzupełnij hasło, aby korzystać z API")
 
     with st.expander("📤 Wgraj nowe pliki", expanded=True):
         uploaded_files = st.file_uploader("Wybierz PDF", type=["pdf","pptx","txt","docx"], accept_multiple_files=True)
@@ -227,7 +256,7 @@ with st.sidebar:
             
             with st.spinner("Wysyłanie..."):
                 try:
-                    res = requests.post(f"{API_URL}/upload", files=files_payload)
+                    res = api_request("POST", "/upload", files=files_payload)
                     if res.status_code == 200:
                         data = res.json()
                         job_id = data.get("job_id")
@@ -404,7 +433,7 @@ if prompt := st.chat_input("Napisz pytanie... np. Jaki jest prognozowany wzrost 
                     "chat_id": st.session_state.active_chat_id
                 }
                 
-                response = requests.post(f"{API_URL}/query", json=payload)
+                response = api_request("POST", "/query", json=payload)
                 
                 if response.status_code == 200:
                     r_data = response.json()

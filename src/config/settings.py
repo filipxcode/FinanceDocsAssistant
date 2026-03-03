@@ -16,6 +16,7 @@ logging.getLogger("llama_index.core.retrievers").setLevel(logging.DEBUG)
 class AppSettings(BaseSettings):
     # App Config
     UPLOAD_DIR: Path = Path("files")
+    MAX_UPLOAD_FILE_SIZE_MB: int = 100
     
     # LLM Config
     LLM_PROVIDER_QUERY: str = "groq"
@@ -40,6 +41,10 @@ class AppSettings(BaseSettings):
     #Languages allowed
     LANGUAGES_ALLOWED: list[str] = ["POLISH"]
 
+    #Demo access credential
+    DEMO_PASSWORD: str = ""
+    DEMO_PASS: str =""
+    
     model_config = SettingsConfigDict(
         env_file=".env", 
         extra="ignore" 
@@ -52,6 +57,10 @@ class AppSettings(BaseSettings):
     @property
     def database_url_sync(self) -> str:
         return f"postgresql+psycopg2://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+
+    @property
+    def demo_password(self) -> str:
+        return self.DEMO_PASSWORD or self.DEMO_PASS
 
 @lru_cache()
 def get_settings() -> AppSettings:

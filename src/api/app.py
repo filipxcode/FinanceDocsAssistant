@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile, BackgroundTasks, File, HTTPException, Query, Depends
+from fastapi import FastAPI, UploadFile, BackgroundTasks, File, HTTPException, Query, Depends, Header, Request
 from fastapi.responses import FileResponse
 from pathlib import Path
 import os
@@ -19,6 +19,10 @@ from src.database.db import create_db_and_tables
 from src.services.chat_service import save_message, create_chat_session, list_chats, get_chat_history, soft_delete_chat, update_chat_title, get_chat
 from src.services.document_service import register_file, list_doc_filenames, delete_full_doc
 from src.services.language_gate import fast_check_llama_native
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+from fastapi.responses import JSONResponse
 
 nest_asyncio.apply()
 configure_settings()
@@ -26,6 +30,8 @@ settings = get_settings()
 
 UPLOAD_DIR = settings.UPLOAD_DIR
 UPLOAD_DIR.mkdir(exist_ok=True)
+MAX_UPLOAD_FILE_SIZE_MB = settings.MAX_UPLOAD_FILE_SIZE_MB
+MAX_UPLOAD_FILE_SIZE_BYTES = MAX_UPLOAD_FILE_SIZE_MB * 1024 * 1024
 JOB_STATUS = TTLCache(maxsize=1000, ttl=3600)
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -37,6 +43,11 @@ class JobStatus(str, Enum):
     FAILED = "failed"
 
 rag_service: RAGService = None
+
+def verify_demo_password(x_demo_password: str = Header(None)):
+    if x_demo_password != settings.DEMO_PASSWORD:
+        raise HTTPException(status_code=401, detail="Brak dostępu. Podaj hasło z CV.")
+    return x_demo_password
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -50,7 +61,16 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(lifespan=lifespan, dependencies=[Depends(verify_demo_password)])
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+app.add_exception_handler(
+    RateLimitExceeded,
+    lambda request, exc: JSONResponse(
+        status_code=429,
+        content={"detail": "Rate limit exceeded. Please try again later."},
+    ),
+)
 
 async def process_rag_tasks(file_paths: list[str], original_paths: list[str], file_sizes: list[int], job_id: str):
     """Function for processing documents which handling the file uploading to rag service layer and file registration to DB."""
@@ -83,7 +103,8 @@ async def check_status():
     return {"status": "ok"}
 
 @app.post("/upload")
-async def upload_files(files: list[UploadFile] = File(...), background_tasks: BackgroundTasks = BackgroundTasks()):
+@limiter.limit("5/minute")
+async def upload_files(request: Request, files: list[UploadFile] = File(...), background_tasks: BackgroundTasks = BackgroundTasks()):
     """Uploads files and starts background processing task"""
     saved_paths = []
     file_sizes = []
@@ -93,11 +114,21 @@ async def upload_files(files: list[UploadFile] = File(...), background_tasks: Ba
     for file in files:
         filename = f"{uuid4()}_{file.filename}" 
         original_filename = file.filename
-        file_size = file.size
         file_path = UPLOAD_DIR / filename
         try: 
             with open(file_path, "wb") as buffer:
-                shutil.copyfileobj(file.file, buffer)
+                total_written = 0
+                while True:
+                    chunk = file.file.read(1024 * 1024)
+                    if not chunk:
+                        break
+                    total_written += len(chunk)
+                    if total_written > MAX_UPLOAD_FILE_SIZE_BYTES:
+                        raise HTTPException(
+                            status_code=413,
+                            detail=f"Plik {original_filename} przekracza limit {MAX_UPLOAD_FILE_SIZE_MB} MB.",
+                        )
+                    buffer.write(chunk)
             
             check_result = fast_check_llama_native(str(file_path))
             if "error" in check_result:
@@ -106,8 +137,13 @@ async def upload_files(files: list[UploadFile] = File(...), background_tasks: Ba
                 continue
             
             saved_paths.append(str(file_path))
-            file_sizes.append(int(file_size))
+            file_sizes.append(int(total_written))
             original_paths.append(str(original_filename))
+        except HTTPException as e:
+            if os.path.exists(file_path):
+                os.remove(file_path)
+            errors.append(e.detail)
+            continue
         except Exception as e:
             raise HTTPException(f"Error in saving file {file.filename}")
     background_tasks.add_task(process_rag_tasks, saved_paths, original_paths, file_sizes, job_id)
@@ -126,7 +162,8 @@ async def get_job_status(job_id: str):
     return {"status": status}
 
 @app.post("/query", response_model=ResponseOutputFinal)
-async def query(q: InputQuery, session: AsyncSession = Depends(get_session)):
+@limiter.limit("5/minute")
+async def query(request: Request, q: InputQuery, session: AsyncSession = Depends(get_session)):
     """Main RAG query endpoint"""
     await save_message(db=session, chat_id=q.chat_id, mess=ChatTemplate.from_input(q))
     try:
