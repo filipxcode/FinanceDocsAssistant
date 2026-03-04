@@ -23,6 +23,8 @@ from slowapi import Limiter
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from fastapi.responses import JSONResponse
+from slowapi.middleware import SlowAPIMiddleware
+import secrets
 
 nest_asyncio.apply()
 configure_settings()
@@ -32,6 +34,8 @@ UPLOAD_DIR = settings.UPLOAD_DIR
 UPLOAD_DIR.mkdir(exist_ok=True)
 MAX_UPLOAD_FILE_SIZE_MB = settings.MAX_UPLOAD_FILE_SIZE_MB
 MAX_UPLOAD_FILE_SIZE_BYTES = MAX_UPLOAD_FILE_SIZE_MB * 1024 * 1024
+MAX_UPLOAD_FILES = settings.MAX_UPLOAD_FILES
+MAX_TOTAL_UPLOAD_SIZE_BYTES = settings.MAX_TOTAL_UPLOAD_SIZE_MB * 1024 * 1024
 JOB_STATUS = TTLCache(maxsize=1000, ttl=3600)
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -44,10 +48,17 @@ class JobStatus(str, Enum):
 
 rag_service: RAGService = None
 
-def verify_demo_password(x_demo_password: str = Header(None)):
-    if x_demo_password != settings.DEMO_PASSWORD:
-        raise HTTPException(status_code=401, detail="Brak dostępu. Podaj hasło z CV.")
-    return x_demo_password
+def verify_demo_password(x_demo_password: str | None = Header(default=None, alias="X-Demo-Password")):
+    expected = (settings.demo_password or "").strip()
+    provided = (x_demo_password or "").strip()
+
+    # Fail closed if demo password is not configured
+    if not expected:
+        raise HTTPException(status_code=503, detail="Demo access is not configured.")
+
+    if not secrets.compare_digest(provided, expected):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    return True
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -61,9 +72,21 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(lifespan=lifespan, dependencies=[Depends(verify_demo_password)])
-limiter = Limiter(key_func=get_remote_address)
+docs_url = None if settings.DEMO_DISABLE_DOCS else "/docs"
+redoc_url = None if settings.DEMO_DISABLE_DOCS else "/redoc"
+openapi_url = None if settings.DEMO_DISABLE_DOCS else "/openapi.json"
+
+app = FastAPI(
+    lifespan=lifespan,
+    dependencies=[Depends(verify_demo_password)],
+    docs_url=docs_url,
+    redoc_url=redoc_url,
+    openapi_url=openapi_url,
+)
+
+limiter = Limiter(key_func=get_remote_address, default_limits=[settings.RATE_LIMIT_DEFAULT])
 app.state.limiter = limiter
+app.add_middleware(SlowAPIMiddleware)
 app.add_exception_handler(
     RateLimitExceeded,
     lambda request, exc: JSONResponse(
@@ -103,7 +126,7 @@ async def check_status():
     return {"status": "ok"}
 
 @app.post("/upload")
-@limiter.limit("5/minute")
+@limiter.limit(settings.RATE_LIMIT_UPLOAD)
 async def upload_files(request: Request, files: list[UploadFile] = File(...), background_tasks: BackgroundTasks = BackgroundTasks()):
     """Uploads files and starts background processing task"""
     saved_paths = []
@@ -111,6 +134,14 @@ async def upload_files(request: Request, files: list[UploadFile] = File(...), ba
     original_paths = []
     errors = []
     job_id = str(uuid4())
+
+    if len(files) > MAX_UPLOAD_FILES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Too many files. Max allowed per request: {MAX_UPLOAD_FILES}.",
+        )
+
+    total_written_all = 0
     for file in files:
         filename = f"{uuid4()}_{file.filename}" 
         original_filename = file.filename
@@ -119,7 +150,7 @@ async def upload_files(request: Request, files: list[UploadFile] = File(...), ba
             with open(file_path, "wb") as buffer:
                 total_written = 0
                 while True:
-                    chunk = file.file.read(1024 * 1024)
+                    chunk = await file.read(1024 * 1024)
                     if not chunk:
                         break
                     total_written += len(chunk)
@@ -127,6 +158,12 @@ async def upload_files(request: Request, files: list[UploadFile] = File(...), ba
                         raise HTTPException(
                             status_code=413,
                             detail=f"Plik {original_filename} przekracza limit {MAX_UPLOAD_FILE_SIZE_MB} MB.",
+                        )
+                    total_written_all += len(chunk)
+                    if total_written_all > MAX_TOTAL_UPLOAD_SIZE_BYTES:
+                        raise HTTPException(
+                            status_code=413,
+                            detail=f"Łączny rozmiar uploadu przekracza limit {settings.MAX_TOTAL_UPLOAD_SIZE_MB} MB.",
                         )
                     buffer.write(chunk)
             
@@ -146,6 +183,16 @@ async def upload_files(request: Request, files: list[UploadFile] = File(...), ba
             continue
         except Exception as e:
             raise HTTPException(f"Error in saving file {file.filename}")
+        finally:
+            try:
+                await file.close()
+            except Exception:
+                pass
+
+    if not saved_paths:
+        JOB_STATUS[job_id] = JobStatus.FAILED
+        return {"message": "No files accepted", "job_id": job_id, "errors": errors}
+
     background_tasks.add_task(process_rag_tasks, saved_paths, original_paths, file_sizes, job_id)
     JOB_STATUS[job_id] = JobStatus.PROCESSING
     response = {"message":"Processing", "job_id": job_id}
@@ -162,7 +209,7 @@ async def get_job_status(job_id: str):
     return {"status": status}
 
 @app.post("/query", response_model=ResponseOutputFinal)
-@limiter.limit("5/minute")
+@limiter.limit(settings.RATE_LIMIT_QUERY)
 async def query(request: Request, q: InputQuery, session: AsyncSession = Depends(get_session)):
     """Main RAG query endpoint"""
     await save_message(db=session, chat_id=q.chat_id, mess=ChatTemplate.from_input(q))

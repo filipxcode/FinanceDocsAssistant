@@ -17,6 +17,14 @@ class AppSettings(BaseSettings):
     # App Config
     UPLOAD_DIR: Path = Path("files")
     MAX_UPLOAD_FILE_SIZE_MB: int = 100
+
+    # Demo hardening (safe defaults for VPS preview)
+    DEMO_DISABLE_DOCS: bool = True
+    MAX_UPLOAD_FILES: int = 3
+    MAX_TOTAL_UPLOAD_SIZE_MB: int = 200
+    RATE_LIMIT_DEFAULT: str = "60/minute"
+    RATE_LIMIT_UPLOAD: str = "3/minute"
+    RATE_LIMIT_QUERY: str = "5/minute"
     
     # LLM Config
     LLM_PROVIDER_QUERY: str = "groq"
