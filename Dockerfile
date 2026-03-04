@@ -54,4 +54,4 @@ CMD ["uvicorn", "src.api.app:app", "--host", "0.0.0.0", "--port", "8000", "--pro
 
 FROM runtime AS gui
 EXPOSE 8501
-CMD ["streamlit", "run", "src/gui/app.py", "--server.port=8501", "--server.address=0.0.0.0"]
+CMD ["streamlit", "run", "src/gui/gui.py", "--server.port=8501", "--server.address=0.0.0.0"]
