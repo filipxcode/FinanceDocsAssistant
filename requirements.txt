@@ -14,6 +14,8 @@ python-dotenv
 cachetools
 nest-asyncio
 lingua-language-detector
+slowapi
+limiter
 # LlamaIndex + integrations
 llama-index-core
 llama-index-embeddings-huggingface
