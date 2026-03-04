@@ -1,6 +1,6 @@
 # FinanceDocsAssistant
 
-Asystent RAG do analizy dokumentów finansowych (PL/EN) oparty na **LlamaIndex + PGVector + FastAPI + Streamlit**.
+Asystent RAG do analizy dokumentów finansowych (PL) oparty na **LlamaIndex + PGVector + FastAPI + Streamlit**.
 
 ## Opis
 
