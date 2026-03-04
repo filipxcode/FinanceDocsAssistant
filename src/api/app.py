@@ -48,7 +48,7 @@ class JobStatus(str, Enum):
 
 rag_service: RAGService = None
 
-def verify_demo_password(x_demo_password: str | None = Header(default=None, alias="X-Demo-Password")):
+def verify_demo_password(request: Request, x_demo_password: str | None = Header(default=None, alias="X-Demo-Password")):
     expected = (settings.demo_password or "").strip()
     provided = (x_demo_password or "").strip()
     
