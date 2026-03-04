@@ -19,7 +19,7 @@ services:
 
   api:
     build:
-      context: ..
+      context: .
       dockerfile: Dockerfile
     container_name: smartdocs_api
     environment:
@@ -44,7 +44,7 @@ services:
 
   gui:
     build:
-      context: ..
+      context: .
       dockerfile: Dockerfile
     container_name: smartdocs_gui
     environment:
