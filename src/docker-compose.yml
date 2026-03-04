@@ -21,6 +21,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      target: api
     container_name: smartdocs_api
     environment:
       POSTGRES_HOST: db
@@ -46,6 +47,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      target: gui
     container_name: smartdocs_gui
     environment:
       API_URL: http://api:8000
