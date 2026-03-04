@@ -15,6 +15,7 @@ cachetools
 nest-asyncio
 lingua-language-detector
 slowapi
+python-multipart
 # LlamaIndex + integrations
 llama-index-core
 llama-index-embeddings-huggingface
