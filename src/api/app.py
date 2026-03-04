@@ -51,7 +51,9 @@ rag_service: RAGService = None
 def verify_demo_password(x_demo_password: str | None = Header(default=None, alias="X-Demo-Password")):
     expected = (settings.demo_password or "").strip()
     provided = (x_demo_password or "").strip()
-
+    
+    if request.url.path == "/status":
+        return True
     # Fail closed if demo password is not configured
     if not expected:
         raise HTTPException(status_code=503, detail="Demo access is not configured.")
