@@ -2,7 +2,7 @@ services:
   db:
     image: ankane/pgvector:latest
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-vector_db}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
     volumes:
@@ -48,3 +48,9 @@ services:
       api:
         condition: service_healthy
     restart: always
+    
+  volumes:
+    postgres_data:
+    files_data:
+    uploads_data:
+    hf_cache:
