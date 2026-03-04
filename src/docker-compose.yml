@@ -1,9 +1,6 @@
 services:
   db:
-    image: ankane/pgvector:latest  
-    container_name: vector_db_container
-    ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+    image: ankane/pgvector:latest
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-postgres}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
@@ -11,7 +8,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-postgres}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -22,7 +19,6 @@ services:
       context: .
       dockerfile: Dockerfile
       target: api
-    container_name: smartdocs_api
     environment:
       POSTGRES_HOST: db
       POSTGRES_PORT: 5432
@@ -36,9 +32,9 @@ services:
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/status', timeout=2)"]
       interval: 15s
-      timeout: 5s
-      retries: 10
-      start_period: 30s
+      timeout: 10s
+      retries: 20
+      start_period: 120s  
     restart: always
 
   gui:
@@ -46,17 +42,9 @@ services:
       context: .
       dockerfile: Dockerfile
       target: gui
-    container_name: smartdocs_gui
     environment:
       API_URL: http://api:8000
     depends_on:
       api:
         condition: service_healthy
-    command: ["streamlit", "run", "src/gui/gui.py", "--server.address=0.0.0.0", "--server.port=8501"]
     restart: always
-
-volumes:
-  postgres_data:
-  files_data:
-  uploads_data:
-  hf_cache:
