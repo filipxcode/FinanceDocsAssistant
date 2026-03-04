@@ -48,7 +48,12 @@ def fast_check_llama_native(file_path: str) -> dict:
         
         if len(common_pl) >= 2 and "POLISH" in settings.LANGUAGES_ALLOWED:
             return {"parsed": "Allowed"}
-
+            
+        polish_chars = set("ąćęłńóśźżĄĆĘŁŃÓŚŹŻ")
+        polish_char_count = sum(1 for c in text_to_analyze if c in polish_chars)
+        if polish_char_count >= 5 and "POLISH" in settings.LANGUAGES_ALLOWED:
+            return {"parsed": "Allowed"}
+            
         confidence_values = Settings.language_detector.compute_language_confidence_values(text_to_analyze)
         
         if not confidence_values:
