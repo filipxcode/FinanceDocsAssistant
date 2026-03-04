@@ -28,7 +28,7 @@ class AppSettings(BaseSettings):
     
     # LLM Config
     LLM_PROVIDER_QUERY: str = "groq"
-    LLM_PROVIDER_SYNTHESIS: str = "openai"
+    LLM_PROVIDER_SYNTHESIS: str = "groq"
     GROQ_API_KEY: str | None = None
     GROQ_MODEL_QUERY: str = "llama-3.1-8b-instant"
     GROQ_MODEL_SYNTHESIS: str = "llama-3.3-70b-versatile"
