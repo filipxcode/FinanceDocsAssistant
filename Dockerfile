@@ -40,7 +40,8 @@ COPY --from=builder /opt/venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH" \
     PYTHONPATH=/app \
     HF_HOME=/app/.cache/huggingface
-
+    HOME=/app
+    
 COPY . /app
 
 RUN mkdir -p /app/files /app/uploads /app/.cache \
