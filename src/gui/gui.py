@@ -14,7 +14,7 @@ st.set_page_config(
 )
 
 if "demo_password" not in st.session_state:
-    st.session_state.demo_password = os.getenv("DEMO_PASSWORD", "")
+    st.session_state.demo_password = ""
 
 def get_auth_headers():
     password = st.session_state.get("demo_password", "").strip()
