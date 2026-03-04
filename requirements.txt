@@ -1,3 +1,5 @@
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch
 fastapi
 uvicorn[standard]
 streamlit
@@ -12,7 +14,6 @@ python-dotenv
 cachetools
 nest-asyncio
 lingua-language-detector
-
 # LlamaIndex + integrations
 llama-index-core
 llama-index-embeddings-huggingface
@@ -20,6 +21,5 @@ llama-index-llms-groq
 llama-index-llms-openai
 llama-index-vector-stores-postgres
 llama-cloud-services
-
 # Optional tracing / evals
 langsmith
