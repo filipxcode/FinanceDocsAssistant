@@ -49,8 +49,8 @@ services:
         condition: service_healthy
     restart: always
     
-  volumes:
-    postgres_data:
-    files_data:
-    uploads_data:
-    hf_cache:
+volumes:
+   postgres_data:
+   files_data:
+   uploads_data:
+   hf_cache:
