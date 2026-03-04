@@ -118,7 +118,7 @@ async def message_history_preprocessor(chat_history: ChatSessionFull) -> list[st
         messages.append(entry)
     return messages
 
-@app.get("/status")
+@app.get("/status", dependencies=[])
 async def check_status():
     """Checks RAG service loading status"""
     if rag_service is None:
