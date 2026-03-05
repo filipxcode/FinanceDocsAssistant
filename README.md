@@ -25,7 +25,7 @@ Aplikacja umożliwia wgrywanie dokumentów finansowych (PDF, PPTX, DOCX, TXT), i
 | Interfejs użytkownika | Streamlit |
 | Framework RAG | LlamaIndex |
 | Baza wektorowa | PostgreSQL + pgvector (`llama-index-vector-stores-postgres`) |
-| Embeddingi | `BAAI/bge-m3` (HuggingFace, wymiar 1024) |
+| Embeddingi | API: OpenAI `text-embedding-3-small` (domyślnie, 1536) lub Voyage (konfigurowalne) |
 | LLM — zapytania | Groq `llama-3.1-8b-instant` |
 | LLM — synteza | OpenAI 'o3-mini'/Groq `llama-3.3-70b-versatile` |
 | Parser dokumentów | LlamaParse |
@@ -58,7 +58,7 @@ Użytkownik (Streamlit GUI)
 
 1. `POST /upload` — zapisuje plik do `files/`, waliduje język (`lingua`), rejestruje w tabeli `documents`
 2. Background task — parsuje dokument (`LlamaParse`), dzieli na węzły (`SentenceWindowNodeParser`)
-3. Węzły z metadanymi (filename, page_label, file_id) zapisywane do PGVector
+3. Węzły z metadanymi (filename, page_label, file_id) zapisywane do PGVector (wymiar zależny od `EMBEDDINGS_DIM`)
 
 ### Pipeline odpowiedzi na pytanie
 
@@ -116,6 +116,10 @@ Uzupełnij klucze API w pliku `.env`:
 GROQ_API_KEY=twoj_klucz
 LLAMAPARSE_API_KEY=twoj_klucz
 OPENAI_API_KEY=twoj_klucz
+EMBEDDINGS_PROVIDER=openai
+EMBEDDINGS_MODEL=text-embedding-3-small
+EMBEDDINGS_DIM=1536
+RERANK_PROVIDER=llm
 LLM_PROVIDER_QUERY=groq
 LLM_PROVIDER_SYNTHESIS=openai
 DEMO_PASSWORD=haslo_demo

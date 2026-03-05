@@ -109,7 +109,8 @@ async def test_upload_file_mocked(client):
         mock_service.process_file = AsyncMock(return_value=True)
         with patch("src.api.app.shutil.copyfileobj"):
             with patch("builtins.open"):
-                response = await client.post("/upload", files=files)
+                with patch("src.api.app.fast_check_llama_native", return_value={}):
+                    response = await client.post("/upload", files=files)
                 
     assert response.status_code == 200
     data = response.json()

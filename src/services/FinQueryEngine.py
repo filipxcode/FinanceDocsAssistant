@@ -4,7 +4,7 @@ from datetime import datetime
 from llama_index.core import Settings, PromptTemplate, get_response_synthesizer
 from llama_index.core.retrievers import QueryFusionRetriever, BaseRetriever
 from llama_index.core.postprocessor import (
-    SentenceTransformerRerank, 
+    LLMRerank,
     MetadataReplacementPostProcessor, 
     SimilarityPostprocessor
 )
@@ -19,6 +19,7 @@ from src.config.prompts import (
     ANSWEAR_GEN_PROMPT, 
     CONDENSE_QUESTION_PROMPT
 )
+from src.config.settings import get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -137,14 +138,19 @@ class FinancialEngineBuilder:
     def _initialize_pipeline(self):
         """Initializes all RAG components once during startup"""
         logger.info("[FinancialEngineBuilder] Initializing RAG pipeline components...")
+
+        app_settings = get_settings()
         
         # 1. Postprocessors
         self.replace_postprocessor = MetadataReplacementPostProcessor(target_metadata_key="window")
         self.treshold_postprocessor = SimilarityPostprocessor(similarity_cutoff=0.1)
-        self.reranker = SentenceTransformerRerank(
-            model="BAAI/bge-reranker-v2-m3", 
-            top_n=10
-        )
+        rerank_provider = (app_settings.RERANK_PROVIDER or "").lower()
+        if rerank_provider == "llm":
+            self.reranker = LLMRerank(llm=Settings.query_llm, top_n=app_settings.RERANK_TOP_N)
+        elif rerank_provider == "none":
+            self.reranker = None
+        else:
+            raise ValueError(f"Unknown RERANK_PROVIDER: {rerank_provider}. Use 'llm' or 'none'.")
         
         # 2. Retrievers
         self.hybrid_retriever = self.index.as_retriever(
@@ -176,7 +182,7 @@ class FinancialEngineBuilder:
             response_synthesizer=self.response_synthesizer,
             postprocessors=[
                 self.replace_postprocessor,
-                self.reranker,              
+                *([self.reranker] if self.reranker is not None else []),
                 self.treshold_postprocessor 
             ]
         )

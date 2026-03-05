@@ -2,9 +2,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from functools import lru_cache
 from pathlib import Path
 from llama_index.core import Settings
-from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from llama_index.llms.groq import Groq
 from llama_index.llms.openai import OpenAI
+from llama_index.embeddings.openai import OpenAIEmbedding
 from llama_index.core.node_parser import SentenceWindowNodeParser
 import sys
 import logging
@@ -35,6 +35,15 @@ class AppSettings(BaseSettings):
     OPENAI_API_KEY: str | None = None
     OPENAI_MODEL_QUERY: str = "o3-mini"
     OPENAI_MODEL_SYNTHESIS: str = "o3-mini"
+
+    # Embeddings (API-based; OpenAI only)
+    EMBEDDINGS_MODEL: str = "text-embedding-3-small"
+    EMBEDDINGS_DIM: int = 1536
+
+    # Reranking (no local models)
+    # Providers: llm | none
+    RERANK_PROVIDER: str = "llm"
+    RERANK_TOP_N: int = 10
     # Database Config
     POSTGRES_USER: str = ""
     POSTGRES_PASSWORD: str = ""
@@ -102,12 +111,14 @@ def get_synthesis_llm():
         return OpenAI(model=settings.OPENAI_MODEL_SYNTHESIS, api_key=settings.OPENAI_API_KEY, temperature=0.1)
 
     raise ValueError(f"Unknown provider: {provider}. Use 'groq' or 'openai'.")
-    
+
+
 def configure_settings():
     """Configures global LlamaIndex settings"""
-    Settings.embed_model = HuggingFaceEmbedding(
-        model_name="BAAI/bge-m3"
-    )
+    settings = get_settings()
+    if not settings.OPENAI_API_KEY:
+        raise ValueError("Embeddings require OPENAI_API_KEY")
+    Settings.embed_model = OpenAIEmbedding(model=settings.EMBEDDINGS_MODEL, api_key=settings.OPENAI_API_KEY)
     
     # Pass necessary args to helper functions
     Settings.query_llm = get_query_llm()

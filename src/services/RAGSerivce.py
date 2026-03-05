@@ -27,7 +27,7 @@ class RAGService:
             connection_string=settings.database_url_sync,
             async_connection_string=settings.database_url_async, 
             table_name=settings.VECTOR_TABLE_NAME, 
-            embed_dim=1024,
+            embed_dim=settings.EMBEDDINGS_DIM,
             hybrid_search=True,
             text_search_config="simple"
         )

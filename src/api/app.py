@@ -171,7 +171,8 @@ async def upload_files(request: Request, files: list[UploadFile] = File(...), ba
             
             check_result = fast_check_llama_native(str(file_path))
             if "error" in check_result:
-                os.remove(file_path)
+                if os.path.exists(file_path):
+                    os.remove(file_path)
                 errors.append(f"File {original_filename} rejected: {check_result['error']}")
                 continue
             
@@ -184,7 +185,9 @@ async def upload_files(request: Request, files: list[UploadFile] = File(...), ba
             errors.append(e.detail)
             continue
         except Exception as e:
-            raise HTTPException(f"Error in saving file {file.filename}")
+            if os.path.exists(file_path):
+                os.remove(file_path)
+            raise HTTPException(status_code=500, detail=f"Error in saving file {file.filename}: {e}")
         finally:
             try:
                 await file.close()

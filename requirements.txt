@@ -1,5 +1,3 @@
---extra-index-url https://download.pytorch.org/whl/cpu
-torch
 fastapi
 uvicorn[standard]
 streamlit
@@ -17,7 +15,7 @@ slowapi
 python-multipart
 # LlamaIndex + integrations
 llama-index-core
-llama-index-embeddings-huggingface
+llama-index-embeddings-openai
 llama-index-llms-groq
 llama-index-llms-openai
 llama-index-vector-stores-postgres
