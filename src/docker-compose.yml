@@ -1,17 +1,14 @@
 services:
   db:
-    image: ankane/pgvector:latest  
-    container_name: vector_db_container
-    ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+    image: ankane/pgvector:latest
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-vector_db}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-postgres}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -19,19 +16,15 @@ services:
 
   api:
     build:
-      context: ..
+      context: .
       dockerfile: Dockerfile
-    container_name: smartdocs_api
-    env_file:
-      - ../.env
+      target: api
     environment:
       POSTGRES_HOST: db
       POSTGRES_PORT: 5432
     depends_on:
       db:
         condition: service_healthy
-    ports:
-      - "8000:8000"
     volumes:
       - files_data:/app/files
       - uploads_data:/app/uploads
@@ -39,30 +32,25 @@ services:
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/status', timeout=2)"]
       interval: 15s
-      timeout: 5s
-      retries: 10
-      start_period: 30s
+      timeout: 10s
+      retries: 20
+      start_period: 120s  
     restart: always
 
   gui:
     build:
-      context: ..
+      context: .
       dockerfile: Dockerfile
-    container_name: smartdocs_gui
-    env_file:
-      - ../.env
+      target: gui
     environment:
       API_URL: http://api:8000
     depends_on:
       api:
         condition: service_healthy
-    command: ["streamlit", "run", "src/gui/gui.py", "--server.address=0.0.0.0", "--server.port=8501"]
-    ports:
-      - "8501:8501"
     restart: always
-
+    
 volumes:
-  postgres_data:
-  files_data:
-  uploads_data:
-  hf_cache:
+   postgres_data:
+   files_data:
+   uploads_data:
+   hf_cache:

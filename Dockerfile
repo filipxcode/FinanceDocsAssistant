@@ -39,8 +39,9 @@ RUN addgroup --system app && adduser --system --ingroup app app
 COPY --from=builder /opt/venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH" \
     PYTHONPATH=/app \
-    HF_HOME=/app/.cache/huggingface
-
+    HF_HOME=/app/.cache/huggingface \
+    HOME=/app
+    
 COPY . /app
 
 RUN mkdir -p /app/files /app/uploads /app/.cache \
@@ -48,6 +49,10 @@ RUN mkdir -p /app/files /app/uploads /app/.cache \
 
 USER app
 
+FROM runtime AS api
 EXPOSE 8000
+CMD ["uvicorn", "src.api.app:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--loop", "asyncio"]
 
-CMD ["uvicorn", "src.api.app:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers"]
+FROM runtime AS gui
+EXPOSE 8501
+CMD ["streamlit", "run", "src/gui/gui.py", "--server.port=8501", "--server.address=0.0.0.0"]

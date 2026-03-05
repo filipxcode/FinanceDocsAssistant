@@ -18,7 +18,7 @@ from uuid import UUID
 from src.database.db import create_db_and_tables
 from src.services.chat_service import save_message, create_chat_session, list_chats, get_chat_history, soft_delete_chat, update_chat_title, get_chat
 from src.services.document_service import register_file, list_doc_filenames, delete_full_doc
-from src.services.language_gate import fast_check_llama_native
+from src.services.gate import fast_check_llama_native
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
@@ -48,10 +48,12 @@ class JobStatus(str, Enum):
 
 rag_service: RAGService = None
 
-def verify_demo_password(x_demo_password: str | None = Header(default=None, alias="X-Demo-Password")):
+def verify_demo_password(request: Request, x_demo_password: str | None = Header(default=None, alias="X-Demo-Password")):
     expected = (settings.demo_password or "").strip()
     provided = (x_demo_password or "").strip()
-
+    
+    if request.url.path == "/status":
+        return True
     # Fail closed if demo password is not configured
     if not expected:
         raise HTTPException(status_code=503, detail="Demo access is not configured.")
@@ -118,7 +120,7 @@ async def message_history_preprocessor(chat_history: ChatSessionFull) -> list[st
         messages.append(entry)
     return messages
 
-@app.get("/status")
+@app.get("/status", dependencies=[])
 async def check_status():
     """Checks RAG service loading status"""
     if rag_service is None:
