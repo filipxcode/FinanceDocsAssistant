@@ -36,9 +36,9 @@ class AppSettings(BaseSettings):
     OPENAI_MODEL_QUERY: str = "o3-mini"
     OPENAI_MODEL_SYNTHESIS: str = "o3-mini"
 
-    # Embeddings (API-based; OpenAI only)
+    # Embeddings (API-based)
     EMBEDDINGS_MODEL: str = "text-embedding-3-small"
-    EMBEDDINGS_DIM: int = 1536
+    EMBEDDINGS_DIM: int = 1024
 
     # Reranking (no local models)
     # Providers: llm | none
@@ -118,7 +118,16 @@ def configure_settings():
     settings = get_settings()
     if not settings.OPENAI_API_KEY:
         raise ValueError("Embeddings require OPENAI_API_KEY")
-    Settings.embed_model = OpenAIEmbedding(model=settings.EMBEDDINGS_MODEL, api_key=settings.OPENAI_API_KEY)
+
+    dimensions = None
+    if (settings.EMBEDDINGS_MODEL or "").startswith("text-embedding-3"):
+        dimensions = settings.EMBEDDINGS_DIM
+
+    Settings.embed_model = OpenAIEmbedding(
+        model=settings.EMBEDDINGS_MODEL,
+        api_key=settings.OPENAI_API_KEY,
+        dimensions=dimensions,
+    )
     
     # Pass necessary args to helper functions
     Settings.query_llm = get_query_llm()
