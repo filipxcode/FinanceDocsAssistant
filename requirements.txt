@@ -13,7 +13,6 @@ pydantic-settings
 python-dotenv
 cachetools
 nest-asyncio
-lingua-language-detector
 slowapi
 python-multipart
 # LlamaIndex + integrations

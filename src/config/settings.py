@@ -8,7 +8,6 @@ from llama_index.llms.openai import OpenAI
 from llama_index.core.node_parser import SentenceWindowNodeParser
 import sys
 import logging
-from lingua import Language, LanguageDetectorBuilder
 
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 logging.getLogger("llama_index.core.retrievers").setLevel(logging.DEBUG)
@@ -37,8 +36,8 @@ class AppSettings(BaseSettings):
     OPENAI_MODEL_QUERY: str = "o3-mini"
     OPENAI_MODEL_SYNTHESIS: str = "o3-mini"
     # Database Config
-    POSTGRES_USER: str = "postgres"
-    POSTGRES_PASSWORD: str = "postgres"
+    POSTGRES_USER: str = ""
+    POSTGRES_PASSWORD: str = ""
     POSTGRES_HOST: str = "localhost"
     POSTGRES_PORT: str = "5432"
     POSTGRES_DB: str = "vector_db"
@@ -46,12 +45,8 @@ class AppSettings(BaseSettings):
     # Vector Helper
     VECTOR_TABLE_NAME: str = "raporty_finansowe_hybrid"
 
-    #Languages allowed
-    LANGUAGES_ALLOWED: list[str] = ["POLISH"]
-
     #Demo access credential
     DEMO_PASSWORD: str = ""
-    DEMO_PASS: str =""
     
     model_config = SettingsConfigDict(
         env_file=".env", 
@@ -68,7 +63,7 @@ class AppSettings(BaseSettings):
 
     @property
     def demo_password(self) -> str:
-        return self.DEMO_PASSWORD or self.DEMO_PASS
+        return self.DEMO_PASSWORD
 
 @lru_cache()
 def get_settings() -> AppSettings:
@@ -110,7 +105,6 @@ def get_synthesis_llm():
     
 def configure_settings():
     """Configures global LlamaIndex settings"""
-    settings = get_settings()
     Settings.embed_model = HuggingFaceEmbedding(
         model_name="BAAI/bge-m3"
     )
@@ -123,8 +117,12 @@ def configure_settings():
         window_size=5,
         window_metadata_key="window",
         original_text_metadata_key="original_text",
+<<<<<<< HEAD
     )
     Settings.language_detector = LanguageDetectorBuilder.from_languages(
         Language.POLISH,
         Language.ENGLISH,
     ).build() 
+=======
+    )
+>>>>>>> 0a4ae85 (feat: updated gate workflow)

@@ -1,21 +1,17 @@
-import re
-from llama_index.core import SimpleDirectoryReader, Settings
-from src.config.settings import get_settings
+from llama_index.core import SimpleDirectoryReader
 
 def fast_check_llama_native(file_path: str) -> dict:
     try:
-        settings = get_settings()
-        POLISH_STOP_WORDS = {"się", "jest", "dla", "oraz", "przez", "spółka", "zł", "tys.", "r/r"}
-        if not file_path.lower().endswith((".pdf",".pptx",".txt",".docx")):
-            return {"error":"Nieobsługiwany format pliku"}
-            
+        if not file_path.lower().endswith((".pdf", ".pptx", ".txt", ".docx")):
+            return {"error": "Nieobsługiwany format pliku"}
+
         reader = SimpleDirectoryReader(input_files=[file_path])
         docs = reader.load_data()
-        
-        if not docs:
-            return {"error":"Pusty plik lub brak warstwy tekstowej (skan?)"}
-            
 
+        if not docs:
+            return {"error": "Pusty plik lub brak warstwy tekstowej (skan?)"}
+
+<<<<<<< HEAD
         meaningful_text = ""
         target_length = 1000  
         for doc in docs:
@@ -69,6 +65,12 @@ def fast_check_llama_native(file_path: str) -> dict:
                 return {"parsed": "Allowed"}
 
         return {"error": f"Nierozpoznany język. Wykryto: {top_res.language.name} ({top_res.value:.2f})"}
+=======
+        total_text = sum(len(doc.text or "") for doc in docs)
+        if total_text < 50:
+            return {"error": "Plik zawiera za mało tekstu do analizy."}
+>>>>>>> 0a4ae85 (feat: updated gate workflow)
 
+        return {"parsed": "Allowed"}
     except Exception as e:
         return {"error": f"Błąd weryfikacji: {str(e)}"}
