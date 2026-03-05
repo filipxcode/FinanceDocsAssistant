@@ -7,7 +7,7 @@ import os
 # --- KONFIGURACJA ---
 API_URL = os.getenv("API_URL", "http://localhost:8000")
 st.set_page_config(
-    page_title="FinAI Assistant",
+    page_title="FinAI Assistant[DEMO]",
     page_icon="📊",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -256,7 +256,7 @@ with st.sidebar:
             
             with st.spinner("Wysyłanie..."):
                 try:
-                    res = api_request("POST", "/upload", files=files_payload)
+                    res = api_request("POST", "/upload", files=files_payload, timeout=60)
                     if res.status_code == 200:
                         data = res.json()
                         job_id = data.get("job_id")
@@ -347,6 +347,7 @@ with st.sidebar:
                 st.rerun()
 
 st.title("📊 FinAI Assistant")
+st.caption("⚠️ Demo version — slower models and rate limits apply. First query may take up to ~60s due to model loading.")
 
 if not st.session_state.active_chat_id:
     st.info("👈 Wybierz rozmowę z menu po lewej lub utwórz nową, aby rozpocząć.")
@@ -433,7 +434,7 @@ if prompt := st.chat_input("Napisz pytanie... np. Jaki jest prognozowany wzrost 
                     "chat_id": st.session_state.active_chat_id
                 }
                 
-                response = api_request("POST", "/query", json=payload)
+                response = api_request("POST", "/query", json=payload, timeout=120)
                 
                 if response.status_code == 200:
                     r_data = response.json()

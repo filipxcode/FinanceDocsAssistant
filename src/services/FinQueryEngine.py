@@ -143,18 +143,18 @@ class FinancialEngineBuilder:
         self.treshold_postprocessor = SimilarityPostprocessor(similarity_cutoff=0.1)
         self.reranker = SentenceTransformerRerank(
             model="BAAI/bge-reranker-v2-m3", 
-            top_n=15
+            top_n=10
         )
         
         # 2. Retrievers
         self.hybrid_retriever = self.index.as_retriever(
-            similarity_top_k=50, 
+            similarity_top_k=30, 
             vector_store_query_mode="hybrid"
         )
 
         self.fusion_retriever = QueryFusionRetriever(
             [self.hybrid_retriever],
-            similarity_top_k=50,
+            similarity_top_k=30,
             num_queries=3,
             query_gen_prompt=QUERY_GEN_PROMPT,
             llm=Settings.query_llm, 
