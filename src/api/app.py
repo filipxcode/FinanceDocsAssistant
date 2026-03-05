@@ -18,7 +18,7 @@ from uuid import UUID
 from src.database.db import create_db_and_tables
 from src.services.chat_service import save_message, create_chat_session, list_chats, get_chat_history, soft_delete_chat, update_chat_title, get_chat
 from src.services.document_service import register_file, list_doc_filenames, delete_full_doc
-from src.services.language_gate import fast_check_llama_native
+from src.services.gate import fast_check_llama_native
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
