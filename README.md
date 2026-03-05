@@ -118,7 +118,7 @@ LLAMAPARSE_API_KEY=twoj_klucz
 OPENAI_API_KEY=twoj_klucz
 LLM_PROVIDER_QUERY=groq
 LLM_PROVIDER_SYNTHESIS=openai
-DEMO_PASSWORD=haslo_demo_dla_rekrutera
+DEMO_PASSWORD=haslo_demo
 MAX_UPLOAD_FILE_SIZE_MB=100
 ```
 
@@ -250,7 +250,7 @@ Ewaluacje przeprowadziłem dla dwóch modeli: **Llama 3.3 70B** i **GPT o3-mini*
 | **Koszt per request** (est.) | $0.0025 (~0.2 ¢) | $0.0115 (~1.1 ¢) |
 | **Koszt za 1 000 zapytań** | $2.50 | $11.50 |
 
-> **Uwaga:** Koszt o3-mini przewyższa Llamę ~4-krotnie, jednak w wartościach bezwzględnych pozostaje niski (~1.1 centa za zapytanie / ~$11.50 za 1 000 zapytań). Biorąc pod uwagę, że przetwarzane są dane finansowe, gdzie dokładność i wiarygodność odpowiedzi mają kluczowe znaczenie, różnica kosztowa jest w pełni akceptowalna.
+> **Uwaga:** Koszt o3-mini przewyższa Llamę ~4-krotnie, jednak dalej pozostaje niski (~1.1 centa za zapytanie / ~$11.50 za 1 000 zapytań). Biorąc pod uwagę, że przetwarzane są dane finansowe, gdzie dokładność i wiarygodność odpowiedzi mają kluczowe znaczenie, różnica kosztowa jest w pełni akceptowalna.
 
 ### Wnioski
 
