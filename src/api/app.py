@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile, BackgroundTasks, File, HTTPException, Query, Depends, Header, Request
+from fastapi import FastAPI, UploadFile, BackgroundTasks, File, HTTPException, Query, Depends, Header, Request, status
 from fastapi.responses import FileResponse
 from pathlib import Path
 import os
@@ -127,7 +127,7 @@ async def check_status():
         return {"status": "loading"}
     return {"status": "ok"}
 
-@app.post("/upload")
+@app.post("/upload", status_code=status.HTTP_202_ACCEPTED)
 @limiter.limit(settings.RATE_LIMIT_UPLOAD)
 async def upload_files(request: Request, files: list[UploadFile] = File(...), background_tasks: BackgroundTasks = BackgroundTasks()):
     """Uploads files and starts background processing task"""
@@ -196,7 +196,10 @@ async def upload_files(request: Request, files: list[UploadFile] = File(...), ba
 
     if not saved_paths:
         JOB_STATUS[job_id] = JobStatus.FAILED
-        return {"message": "No files accepted", "job_id": job_id, "errors": errors}
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"message": "No files accepted", "job_id": job_id, "errors": errors},
+        )
 
     background_tasks.add_task(process_rag_tasks, saved_paths, original_paths, file_sizes, job_id)
     JOB_STATUS[job_id] = JobStatus.PROCESSING
@@ -208,10 +211,10 @@ async def upload_files(request: Request, files: list[UploadFile] = File(...), ba
 @app.get("/jobs/{job_id}")
 async def get_job_status(job_id: str):
     """Returns status of the file processing job"""
-    status = JOB_STATUS.get(job_id)
-    if not status:
-        return {"status": "unknown"}
-    return {"status": status}
+    job_status = JOB_STATUS.get(job_id)
+    if not job_status:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
+    return {"status": job_status}
 
 @app.post("/query", response_model=ResponseOutputFinal)
 @limiter.limit(settings.RATE_LIMIT_QUERY)
@@ -242,7 +245,7 @@ async def file_context(filename: str):
         content_disposition_type="inline"
     )
     
-@app.post("/chats")
+@app.post("/chats", status_code=status.HTTP_201_CREATED)
 async def create_chat(chat_data: ChatCreate, session: AsyncSession = Depends(get_session)):
     """Creates a new chat session"""
     id, title = await create_chat_session(db=session, title=chat_data.title)
