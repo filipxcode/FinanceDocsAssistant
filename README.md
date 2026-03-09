@@ -13,7 +13,6 @@ Aplikacja umożliwia wgrywanie dokumentów finansowych (PDF, PPTX, DOCX, TXT), i
 - Odpowiedzi ze wskazaniem źródeł (nazwa pliku + strona)
 - Ekstrakcja kluczowych danych finansowych do tabeli (eksport CSV)
 - Wyszukiwanie hybrydowe (wektorowe + pełnotekstowe) z rerankingiem
-- Walidacja języka dokumentu (filtr akceptuje dokumenty w języku polskim)
 - Zarządzanie dokumentami i sesjami czatu przez GUI
 - Przetwarzanie plików w tle (background tasks)
 
@@ -30,7 +29,6 @@ Aplikacja umożliwia wgrywanie dokumentów finansowych (PDF, PPTX, DOCX, TXT), i
 | LLM — synteza | OpenAI 'o3-mini'/Groq `llama-3.3-70b-versatile` |
 | Parser dokumentów | LlamaParse |
 | Node parser | SentenceWindowNodeParser (window_size=5) |
-| Detekcja języka | lingua-language-detector |
 | ORM / baza danych | SQLAlchemy + asyncpg |
 | Tracing / ewaluacja | LangSmith (opcjonalnie) |
 | Konteneryzacja | Docker Compose |
@@ -92,7 +90,7 @@ Użytkownik (Streamlit GUI)
 │   │   ├── parser.py              # Parsowanie dokumentów (LlamaParse)
 │   │   ├── chat_service.py        # Operacje CRUD na czatach
 │   │   ├── document_service.py    # Operacje CRUD na dokumentach
-│   │   └── language_gate.py       # Walidacja języka dokumentu
+│   │   └── language_gate.py       # Walidacja dokumentu
 │   └── docker-compose.yml         # Docker Compose (DB + opcjonalnie API/UI)
 ├── tests/
 │   └── rag_test/
